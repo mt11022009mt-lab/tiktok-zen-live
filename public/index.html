@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đại Chánh Điện Tịnh Tâm - TikTok Live Cinematic Overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,800;1,700&family=Quicksand:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="vertical">
+  <div id="app-container">
+    <!-- 1. Background Layers: Temple Architecture, God Rays, Ambient Particles -->
+    <div class="temple-bg-architect">
+      <!-- Ornate Carved Temple Pillars (Cột Gỗ Lim Hoàng Gia) -->
+      <div class="temple-pillar pillar-left"></div>
+      <div class="temple-pillar pillar-right"></div>
+      <!-- Temple Eaves / Mái Vòm Cổ Tự -->
+      <div class="temple-eave-roof"></div>
+      <!-- Volumetric God Rays (Luồng Sáng Thần Thông) -->
+      <div class="god-rays">
+        <div class="ray ray-1"></div>
+        <div class="ray ray-2"></div>
+        <div class="ray ray-3"></div>
+      </div>
+    </div>
+
+    <!-- Particle Canvas for Incense Smoke & Falling Lotus Petals -->
+    <canvas id="ambient-canvas"></canvas>
+
+    <!-- 2. Top Header & Honor Board (Bảng Vàng Công Đức Hoàng Gia) -->
+    <header class="temple-header">
+      <div class="temple-emblem">
+        <span class="emblem-symbol">☸</span>
+      </div>
+      <div class="temple-title-box">
+        <h1 class="temple-title">ĐẠI CHÁNH ĐIỆN VẠN PHẬT</h1>
+        <div class="temple-subtitle">TỊNH TÂM TỌA THIỀN • CÔNG ĐỨC VÔ LƯỢNG • PHƯỚC ĐỨC VÔ BIÊN</div>
+      </div>
+
+      <!-- Live Counters Badges -->
+      <div class="live-counters">
+        <div class="counter-badge counter-gong">
+          <span class="icon">🔔</span>
+          <span class="label">Mõ Ngân:</span>
+          <span class="value" id="count-gong">0</span>
+        </div>
+        <div class="counter-badge counter-seats">
+          <span class="icon">🪷</span>
+          <span class="label">Tọa Thiền:</span>
+          <span class="value" id="count-seated">0/24</span>
+        </div>
+        <div class="counter-badge counter-likes">
+          <span class="icon">💖</span>
+          <span class="label">Thả Tim:</span>
+          <span class="value" id="count-likes">0</span>
+        </div>
+      </div>
+
+      <!-- TOP DONATORS PODIUM (Bảng Vàng Công Đức Dát Vàng) -->
+      <div class="honor-board">
+        <div class="honor-header">
+          <span class="dragon-dec">𑁍</span>
+          <span class="honor-title-text">BẢNG VÀNG ĐẠI CÔNG ĐỨC</span>
+          <span class="dragon-dec">𑁍</span>
+        </div>
+        <div class="honor-podium" id="honor-podium">
+          <div class="honor-empty">Chờ thiện nam tín nữ phát tâm cúng dường...</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 3. Sacred Altar & Majestic Golden Buddha Statue (Bàn Thờ & Tượng Phật Uy Nghiêm) -->
+    <section class="shrine-section">
+      <!-- Sacred Rotating Mandala Halo (Hào Quang Phật Quang Đa Tầng) -->
+      <div class="sacred-mandala">
+        <div class="mandala-ring ring-outer"></div>
+        <div class="mandala-ring ring-middle"></div>
+        <div class="mandala-ring ring-inner"></div>
+        <div class="mandala-core-glow"></div>
+      </div>
+
+      <!-- High-Art Gilded Buddha Figure (Tượng Phật Thích Ca Mâu Ni Dát Vàng) -->
+      <div class="buddha-wrapper">
+        <svg class="buddha-masterpiece" viewBox="0 0 320 340">
+          <defs>
+            <linearGradient id="gold-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fff6cc"/>
+              <stop offset="35%" stop-color="#fbd051"/>
+              <stop offset="70%" stop-color="#d48b1d"/>
+              <stop offset="100%" stop-color="#734208"/>
+            </linearGradient>
+            <linearGradient id="gold-bright" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffe680"/>
+              <stop offset="100%" stop-color="#e6a117"/>
+            </linearGradient>
+            <radialGradient id="halo-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fff8db" stop-opacity="0.9"/>
+              <stop offset="40%" stop-color="#f5c242" stop-opacity="0.6"/>
+              <stop offset="80%" stop-color="#d97706" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="#78350f" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="robe-saffron" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f59e0b"/>
+              <stop offset="50%" stop-color="#b45309"/>
+              <stop offset="100%" stop-color="#78350f"/>
+            </linearGradient>
+            <linearGradient id="lotus-gold-pedestal" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffe885"/>
+              <stop offset="50%" stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#92400e"/>
+            </linearGradient>
+            <filter id="divine-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="6" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+
+          <!-- Radiant Aura Behind Head -->
+          <circle cx="160" cy="115" r="95" fill="url(#halo-glow)" opacity="0.85"/>
+          <circle cx="160" cy="115" r="70" fill="none" stroke="#fbd051" stroke-width="2" stroke-dasharray="6,4" opacity="0.7"/>
+          <circle cx="160" cy="115" r="50" fill="none" stroke="#ffe680" stroke-width="1.5" opacity="0.8"/>
+
+          <!-- Buddha Body Base - Gilded Robe Silhouette -->
+          <!-- Crossed Legs in Padmasana (Kiết Già) -->
+          <ellipse cx="160" cy="245" rx="85" ry="32" fill="url(#gold-primary)"/>
+          <path d="M75,245 Q160,285 245,245 Q160,260 75,245 Z" fill="url(#robe-saffron)" opacity="0.9"/>
+
+          <!-- Torso & Buddhist Kasaya Robe (Áo Cà Sa) -->
+          <path d="M110,230 C105,170 125,145 160,145 C195,145 215,170 210,230 Z" fill="url(#gold-primary)"/>
+          <!-- Saffron Robe Drape Folds -->
+          <path d="M125,160 Q160,200 135,245 Q160,225 190,165 Z" fill="url(#robe-saffron)" opacity="0.6"/>
+
+          <!-- Dhyana Mudra Hands (Thủ Ấn Thiền Định & Bát Đồng) -->
+          <ellipse cx="160" cy="225" rx="28" ry="12" fill="url(#gold-bright)"/>
+          <!-- Alms Bowl (Bình Bát) -->
+          <ellipse cx="160" cy="222" rx="16" ry="8" fill="#5c2d0b" stroke="#ffd700" stroke-width="1.5"/>
+
+          <!-- Neck & Head -->
+          <ellipse cx="160" cy="130" rx="16" ry="14" fill="url(#gold-primary)"/>
+          <!-- Head / Face (Gương Mặt Từ Bi Tròn Đầy) -->
+          <ellipse cx="160" cy="105" rx="32" ry="36" fill="url(#gold-bright)" filter="url(#divine-glow)"/>
+
+          <!-- Ushnisha & Jewel (Nhục Kế & Ngọc Mani) -->
+          <path d="M142,75 Q160,52 178,75 Z" fill="url(#gold-primary)"/>
+          <circle cx="160" cy="62" r="10" fill="url(#gold-bright)"/>
+          <circle cx="160" cy="46" r="5" fill="#ff4500" filter="drop-shadow(0 0 6px #ff4500)"/>
+
+          <!-- Serene Facial Features (Mắt Phượng Khép Hờ, Nụ Cười Từ Bi) -->
+          <!-- Urna Dot (Bạch Hào Giữa Chân Mày) -->
+          <circle cx="160" cy="92" r="2.5" fill="#ffd700" filter="drop-shadow(0 0 4px #fff)"/>
+          <!-- Eyebrows (Cung Mày Trăng Khuyết) -->
+          <path d="M140,96 Q148,91 155,96" fill="none" stroke="#78350f" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M165,96 Q172,91 180,96" fill="none" stroke="#78350f" stroke-width="1.8" stroke-linecap="round"/>
+          <!-- Half-closed Compassionate Eyes -->
+          <path d="M140,103 Q148,107 155,102" fill="none" stroke="#5c2d0b" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M165,102 Q172,107 180,103" fill="none" stroke="#5c2d0b" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- Nose Bridge -->
+          <path d="M160,98 L160,114 Q160,117 156,117" fill="none" stroke="#b45309" stroke-width="1.5"/>
+          <!-- Peaceful Smile (Miệng Cười Hoan Hỷ) -->
+          <path d="M152,125 Q160,130 168,125" fill="none" stroke="#78350f" stroke-width="2" stroke-linecap="round"/>
+
+          <!-- Long Ears of Wisdom (Tai Phật Chảy Dài) -->
+          <path d="M128,95 Q122,112 126,128 Q130,128 130,115 Z" fill="url(#gold-primary)"/>
+          <path d="M192,95 Q198,112 194,128 Q190,128 190,115 Z" fill="url(#gold-primary)"/>
+
+          <!-- Double Lotus Throne Base (Tòa Sen Ngũ Sắc Dưới Chân Phật) -->
+          <g transform="translate(0, 240)">
+            <!-- Upper Petals -->
+            <path d="M70,18 Q90,-8 110,18" fill="url(#lotus-gold-pedestal)" stroke="#ffd700" stroke-width="1"/>
+            <path d="M100,20 Q125,-12 145,20" fill="url(#lotus-gold-pedestal)" stroke="#ffd700" stroke-width="1"/>
+            <path d="M135,22 Q160,-16 185,22" fill="url(#lotus-gold-pedestal)" stroke="#ffd700" stroke-width="1.5"/>
+            <path d="M175,20 Q200,-12 220,20" fill="url(#lotus-gold-pedestal)" stroke="#ffd700" stroke-width="1"/>
+            <path d="M210,18 Q230,-8 250,18" fill="url(#lotus-gold-pedestal)" stroke="#ffd700" stroke-width="1"/>
+            <!-- Lower Octagonal Gilded Plinth -->
+            <polygon points="50,25 270,25 255,48 65,48" fill="url(#gold-primary)" stroke="#ffd700" stroke-width="2"/>
+            <polygon points="65,48 255,48 245,60 75,60" fill="#78350f"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Tiered Altar (Bàn Thờ Gỗ Hương Chạm Trổ & Lư Đồng Bát Bửu) -->
+      <div class="altar-cinematic">
+        <!-- Left Dragon Lotus Lamp (Đèn Hoa Sen Tả) -->
+        <div class="altar-lamp lamp-left">
+          <div class="lamp-flame"></div>
+          <div class="lamp-lotus-cup"></div>
+          <div class="lamp-pillar-stem"></div>
+        </div>
+
+        <!-- Center Sacred Bronze Incense Censer (Lư Đồng Xông Trầm Trọng Điểm) -->
+        <div class="censer-master">
+          <div class="censer-smoke-source"></div>
+          <div class="censer-handles-left"></div>
+          <div class="censer-pot">
+            <div class="pot-rim"></div>
+            <div class="pot-body">
+              <span class="censer-symbol">𑁍</span>
+            </div>
+            <div class="pot-feet"></div>
+          </div>
+          <div class="censer-handles-right"></div>
+          <!-- 3 Burning Incense Sticks (Ba Nén Hương Trầm Khói Nghi Ngút) -->
+          <div class="incense-cluster">
+            <div class="stick stick-1"><span class="ember-glow"></span></div>
+            <div class="stick stick-2"><span class="ember-glow"></span></div>
+            <div class="stick stick-3"><span class="ember-glow"></span></div>
+          </div>
+        </div>
+
+        <!-- Right Dragon Lotus Lamp (Đèn Hoa Sen Hữu) -->
+        <div class="altar-lamp lamp-right">
+          <div class="lamp-flame"></div>
+          <div class="lamp-lotus-cup"></div>
+          <div class="lamp-pillar-stem"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Main 2.5D Meditation Hall (Thiền Đường Bồ Đoàn Đài Sen 3D) -->
+    <main class="meditation-hall">
+      <div class="seats-container" id="seats-grid">
+        <!-- Rendered dynamically by JavaScript (24 3D Lotus Thrones) -->
+      </div>
+    </main>
+
+    <!-- 5. Bottom Scrolling Banner (Khu Vực Phía Dưới Chừa Trống Cho Chat TikTok) -->
+    <footer class="temple-footer">
+      <div class="guide-marquee">
+        <div class="marquee-track">
+          <span>🌸 <strong>PHÁP MÔN TỊNH TÂM:</strong> Bình luận để nhập đàn tọa thiền • Thả tim để phụng thỉnh mõ ngân • Cúng dường Hoa Hồng / Xu để đăng tòa Sen Vàng phát quang! 🌸</span>
+          <span>✨ Nguyện đem công đức này • Hướng về khắp tất cả • Đệ tử và chúng sinh • Đều trọn thành Phật đạo! ✨</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- 6. GRAND DONATION FULLSCREEN CEREMONY POPUP (Đại Lễ Cúng Dường Hoàng Kim) -->
+    <div id="grand-gift-popup" class="gift-popup hidden">
+      <div class="popup-backdrop"></div>
+      <div class="popup-content">
+        <div class="popup-radiance-halo"></div>
+        <div class="popup-lotus-icon">🪷</div>
+        <div class="popup-title">ĐẠI THÍ CHỦ PHÁT TÂM CÚNG DƯỜNG</div>
+        
+        <div class="popup-avatar-pedestal">
+          <div class="avatar-ring-glow"></div>
+          <img id="popup-avatar" src="" alt="Avatar Thí Chủ">
+          <div class="popup-crown-gold">👑</div>
+        </div>
+
+        <div class="popup-nickname" id="popup-nickname">Minh Trí Đại Sư</div>
+        <div class="popup-gift-badge" id="popup-gift-name">10 đóa Hoa Sen Vàng</div>
+        <div class="popup-blessing" id="popup-blessing">A Di Đà Phật • Công Đức Vô Lượng • Phước Báu Vô Biên</div>
+      </div>
+    </div>
+
+    <!-- 7. REPLACED NOTICE TOAST -->
+    <div id="kicked-notice" class="kicked-toast hidden">
+      <span class="icon">🕊️</span>
+      <span id="kicked-text">Thí chủ đã viên mãn thời thiền, nhường bồ đoàn cho thiện tri thức mới</span>
+    </div>
+
+    <!-- 8. STREAMER QUICK TOOLBAR -->
+    <div class="streamer-quick-toolbar">
+      <button id="btn-toggle-sound" title="Bật/Tắt Âm Thanh" class="quick-btn">🔊</button>
+      <button id="btn-toggle-music" title="Bật/Tắt Nhạc Thiền Nền" class="quick-btn">🎵</button>
+      <button id="btn-toggle-layout" title="Chuyển Dọc/Ngang (Phím L)" class="quick-btn">📱/💻</button>
+      <a href="/admin.html" target="_blank" class="quick-btn admin-link" title="Mở Bảng Điều Khiển Admin">⚙️ Admin</a>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bảng Điều Khiển & Giả Lập - Chánh Điện Live</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="admin-wrapper">
+    <!-- Top Header -->
+    <header class="admin-header">
+      <div class="brand">
+        <span class="icon">☸</span>
+        <div>
+          <h1>BẢNG ĐIỀU KHIỂN CHÁNH ĐIỆN TIKTOK LIVE</h1>
+          <p>Hệ Thống Tương Tác & Giả Lập Tọa Thiền Tự Động</p>
+        </div>
+      </div>
+      <div class="quick-links">
+        <a href="/?layout=vertical" target="_blank" class="btn btn-outline">📱 Xem Màn Hình Dọc (9:16)</a>
+        <a href="/?layout=horizontal" target="_blank" class="btn btn-outline">💻 Xem Màn Hình Ngang (16:9)</a>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="admin-grid">
+      <!-- Left Column: TikTok Connection & Live Status -->
+      <div class="card card-connection">
+        <div class="card-header">
+          <h2>📡 1. KẾT NỐI TIKTOK LIVE</h2>
+          <span class="status-indicator" id="status-indicator">Chưa kết nối</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="tiktok-user">Tên tài khoản TikTok đang Live (Username):</label>
+            <div class="input-with-prefix">
+              <span class="prefix">@</span>
+              <input type="text" id="tiktok-user" placeholder="Ví dụ: thaythichthien, phongthuyzen...">
+            </div>
+          </div>
+          <div class="btn-group">
+            <button id="btn-connect" class="btn btn-primary">🚀 Bắt Đầu Kết Nối Live</button>
+            <button id="btn-disconnect" class="btn btn-danger" disabled>⏹️ Ngắt Kết Nối</button>
+          </div>
+          <p class="hint-text">💡 <strong>Mẹo:</strong> Kênh TikTok phải <strong>ĐANG BẬT LIVE</strong> thì mới kết nối được. Nếu chưa live, anh hãy dùng <strong>Bộ Giả Lập (Bên cạnh)</strong> để test thử nhé!</p>
+
+          <!-- Current Live Stats -->
+          <div class="stats-mini-box">
+            <div class="stat-mini">
+              <span class="stat-num" id="stat-viewers">0</span>
+              <span class="stat-lbl">Mắt Xem</span>
+            </div>
+            <div class="stat-mini">
+              <span class="stat-num" id="stat-likes">0</span>
+              <span class="stat-lbl">Lượt Tim</span>
+            </div>
+            <div class="stat-mini">
+              <span class="stat-num" id="stat-gong">0</span>
+              <span class="stat-lbl">Lần Gõ Mõ</span>
+            </div>
+            <div class="stat-mini">
+              <span class="stat-num" id="stat-diamonds">0</span>
+              <span class="stat-lbl">Kim Cương</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Column: Sandbox Simulator (BỘ GIẢ LẬP TEST THỬ) -->
+      <div class="card card-simulator">
+        <div class="card-header">
+          <h2>🎮 2. BỘ GIẢ LẬP TƯƠNG TÁC (TEST NGAY)</h2>
+          <span class="badge badge-gold">Simulator Sandbox</span>
+        </div>
+        <div class="card-body">
+          <p class="section-desc">Bấm các nút dưới đây để mô phỏng người xem thật vào cmt, thả tim và donate quà:</p>
+
+          <div class="sim-category">
+            <div class="cat-title">🪷 Tọa Thiền & Bình Luận:</div>
+            <div class="sim-buttons">
+              <button id="btn-sim-batch" class="btn btn-gold">👥 Lấp Đầy 12 Bồ Đoàn Ngay</button>
+              <button id="btn-sim-chat" class="btn btn-secondary">💬 1 Người Cmt Vào Ngồi</button>
+              <button id="btn-sim-reset" class="btn btn-dark">🧹 Thanh Tịnh (Xóa Hết Ghế)</button>
+            </div>
+          </div>
+
+          <div class="sim-category">
+            <div class="cat-title">🔔 Thả Tim & Gõ Mõ:</div>
+            <div class="sim-buttons">
+              <button id="btn-sim-like10" class="btn btn-secondary">💖 Thả 10 Tim (Gõ 2 Mõ)</button>
+              <button id="btn-sim-like50" class="btn btn-secondary">💖💖 Thả 50 Tim (Gõ 10 Mõ)</button>
+            </div>
+          </div>
+
+          <div class="sim-category">
+            <div class="cat-title">🎁 Thí Chủ Phát Tâm Cúng Dường (Quà Tặng):</div>
+            <div class="sim-buttons grid-2x2">
+              <button id="btn-gift-rose" class="btn btn-gift">
+                <span class="icon">🌹</span>
+                <div>
+                  <strong>Tặng Hoa Hồng</strong>
+                  <small>1 Xu • Thăng hàng Sen Ngọc</small>
+                </div>
+              </button>
+              <button id="btn-gift-bell" class="btn btn-gift">
+                <span class="icon">🔔</span>
+                <div>
+                  <strong>Tặng Chuông Bát</strong>
+                  <small>20 Xu • Rền Đại Hồng Chung</small>
+                </div>
+              </button>
+              <button id="btn-gift-incense" class="btn btn-gift">
+                <span class="icon">🪔</span>
+                <div>
+                  <strong>Tặng Nụ Trầm VIP</strong>
+                  <small>99 Xu • Lên Ghế Sen Vàng</small>
+                </div>
+              </button>
+              <button id="btn-gift-universe" class="btn btn-gift btn-super-gift">
+                <span class="icon">🌌</span>
+                <div>
+                  <strong>Vũ Trụ Cực Lạc</strong>
+                  <small>5000 Xu • Đại Lễ Toàn Màn Hình</small>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: OBS Setup & Layout Settings -->
+      <div class="card card-settings">
+        <div class="card-header">
+          <h2>⚙️ 3. CÀI ĐẶT OBS & HIỂN THỊ</h2>
+        </div>
+        <div class="card-body">
+          <div class="setting-item">
+            <label>Khung hình phát sóng:</label>
+            <div class="btn-group">
+              <button id="btn-layout-vert" class="btn btn-outline active">📱 Khung Dọc (9:16)</button>
+              <button id="btn-layout-horiz" class="btn btn-outline">💻 Khung Ngang (16:9)</button>
+            </div>
+          </div>
+
+          <!-- OBS Guide Box -->
+          <div class="obs-guide-box">
+            <h3>📹 HƯỚNG DẪN THÊM VÀO OBS / TIKTOK LIVE STUDIO:</h3>
+            <ol>
+              <li>Trong OBS, tạo nguồn mới dạng: <strong>Browser (Trình duyệt)</strong>.</li>
+              <li>Dán đường link bên dưới vào ô <strong>URL</strong>:</li>
+            </ol>
+            <div class="copy-url-box">
+              <input type="text" id="obs-url-input" value="http://localhost:3000/?layout=vertical" readonly>
+              <button id="btn-copy-url" class="btn btn-sm btn-primary">📋 Sao Chép</button>
+            </div>
+            <div class="obs-specs">
+              <div><strong>Khung Dọc:</strong> Width <code>1080</code>, Height <code>1920</code></div>
+              <div><strong>Khung Ngang:</strong> Width <code>1920</code>, Height <code>1080</code></div>
+              <div>Tích chọn: <em>"Control audio via OBS" (Điều khiển âm thanh qua OBS)</em></div>
+            </div>
+          </div>
+
+          <!-- Live Event Feed Log -->
+          <div class="event-feed-box">
+            <h3>📜 NHẬT KÝ TƯƠNG TÁC THỜI GIAN THỰC:</h3>
+            <div id="event-feed" class="event-log">
+              <div class="log-entry">Hệ thống sẵn sàng đón chào thiện nam tín nữ...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

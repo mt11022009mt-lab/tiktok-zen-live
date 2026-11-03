@@ -1,0 +1,48 @@
+name: TikTok Zen Live 24-7 Cloud Streamer
+
+on:
+  workflow_dispatch: # Cho phép bấm nút "Run workflow" bất cứ lúc nào
+  schedule:
+    # Tự động trigger mỗi 5 tiếng để tạo chuỗi tiếp nối
+    - cron: '0 */5 * * *'
+
+jobs:
+  cloud_stream:
+    name: Phát Sóng Chánh Điện Trực Tiếp Lên TikTok
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # Giới hạn tối đa 6 tiếng của GitHub runner
+
+    steps:
+      - name: 📥 Tải Mã Nguồn Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Cài Đặt Node.js Môi Trường
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Cài Đặt Thư Viện Node.js
+        run: npm install
+
+      - name: 🖥️ Cài Đặt Xvfb, PulseAudio & FFmpeg
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y xvfb pulseaudio ffmpeg dbus-x11
+
+      - name: 🚀 Khởi Động Stream Chánh Điện Lên TikTok
+        env:
+          TIKTOK_STREAM_KEY: ${{ secrets.TIKTOK_STREAM_KEY }}
+          TIKTOK_RTMP_URL: ${{ secrets.TIKTOK_RTMP_URL || 'rtmp://live-upload.tiktok.com:443/live/' }}
+          TIKTOK_USERNAME: ${{ secrets.TIKTOK_USERNAME }}
+        run: |
+          chmod +x ./scripts/stream_runner.sh
+          ./scripts/stream_runner.sh
+
+      - name: 🔄 Tự Động Kích Hoạt Phiên Tiếp Theo (Treo 24/7 Không Ngắt)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Kích hoạt phiên stream kế tiếp để nối luồng 24/7..."
+          gh workflow run stream.yml || true
