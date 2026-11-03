@@ -513,6 +513,15 @@ io.on('connection', socket => {
     broadcastState();
   });
 
+  // Admin Background Music & TTS Control
+  socket.on('admin:bgm', data => {
+    io.emit('audio:bgm', data);
+  });
+
+  socket.on('admin:test_tts', data => {
+    io.emit('audio:tts_test', data);
+  });
+
   // ==========================================
   // SIMULATOR HANDLERS (FOR TESTING WITHOUT LIVE)
   // ==========================================

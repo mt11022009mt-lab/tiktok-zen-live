@@ -27,6 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnGiftIncense = document.getElementById('btn-gift-incense');
   const btnGiftUniverse = document.getElementById('btn-gift-universe');
 
+  const btnBgmChant = document.getElementById('btn-bgm-chant');
+  const btnBgmZen = document.getElementById('btn-bgm-zen');
+  const btnBgmStop = document.getElementById('btn-bgm-stop');
+  const btnTestTts = document.getElementById('btn-test-tts');
+
   const btnLayoutVert = document.getElementById('btn-layout-vert');
   const btnLayoutHoriz = document.getElementById('btn-layout-horiz');
   const obsUrlInput = document.getElementById('obs-url-input');
@@ -114,6 +119,31 @@ document.addEventListener('DOMContentLoaded', () => {
   btnGiftUniverse.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Vũ Trụ Cực Lạc', diamonds: 5000, count: 1 } });
   });
+
+  // Background Music & TTS Handlers
+  if (btnBgmChant) {
+    btnBgmChant.addEventListener('click', () => {
+      socket.emit('admin:bgm', { action: 'play', track: '/assets/nam_mo_a_di_da_phat.mp3' });
+    });
+  }
+
+  if (btnBgmZen) {
+    btnBgmZen.addEventListener('click', () => {
+      socket.emit('admin:bgm', { action: 'play', track: '/assets/zen_meditation.mp3' });
+    });
+  }
+
+  if (btnBgmStop) {
+    btnBgmStop.addEventListener('click', () => {
+      socket.emit('admin:bgm', { action: 'stop' });
+    });
+  }
+
+  if (btnTestTts) {
+    btnTestTts.addEventListener('click', () => {
+      socket.emit('admin:test_tts', { preset: 'blessing_general.mp3' });
+    });
+  }
 
   // ==========================================
   // SOCKET STATE UPDATES

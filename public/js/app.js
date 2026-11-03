@@ -162,61 +162,76 @@ class TempleAudioEngine {
       oscs.push(osc);
     });
 
-    this.ambientNodes = { master, oscs };
-    this.musicEnabled = true;
+  // Toggle Background Music Player (Nhạc Niệm Phật & Nhạc Thiền Tiếng Việt)
+  toggleAmbientMusic() {
+    const player = document.getElementById('bgm-player');
+    if (!player) return false;
+
+    if (this.musicEnabled) {
+      player.pause();
+      this.musicEnabled = false;
+      return false;
+    } else {
+      player.volume = 0.45;
+      player.play().catch(e => {
+        console.log('[BGM] Autoplay blocked, waiting for click:', e);
+      });
+      this.musicEnabled = true;
+      return true;
+    }
+  }
+
+  setBgmTrack(trackPath) {
+    const player = document.getElementById('bgm-player');
+    if (!player) return;
+    const wasPlaying = this.musicEnabled;
+    player.src = trackPath;
+    if (wasPlaying) {
+      player.play().catch(e => console.log('[BGM] Error:', e));
+    }
   }
 
   stopAmbientMusic() {
-    if (!this.ambientNodes) return;
-    const now = this.ctx.currentTime;
-    this.ambientNodes.master.gain.linearRampToValueAtTime(0.0001, now + 1.5);
-    setTimeout(() => {
-      if (this.ambientNodes) {
-        this.ambientNodes.oscs.forEach(o => {
-          try { o.stop(); } catch(e) {}
-        });
-        this.ambientNodes = null;
-      }
-    }, 1600);
+    const player = document.getElementById('bgm-player');
+    if (player) player.pause();
     this.musicEnabled = false;
   }
 }
 
-// 2. TEXT-TO-SPEECH (TTS) AI VOICE ANNOUNCER
+// 2. TEXT-TO-SPEECH (TTS) AI VOICE ANNOUNCER (CHUẨN TIẾNG VIỆT 100%)
 class TempleAnnouncer {
   constructor() {
     this.enabled = true;
-    this.synth = window.speechSynthesis || null;
-    this.voice = null;
-    this.initVoice();
-  }
-
-  initVoice() {
-    if (!this.synth) return;
-    const loadVoices = () => {
-      const voices = this.synth.getVoices();
-      this.voice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VIE')) || voices[0];
-    };
-    loadVoices();
-    if (this.synth.onvoiceschanged !== undefined) {
-      this.synth.onvoiceschanged = loadVoices;
-    }
+    this.audioQueue = [];
+    this.isPlaying = false;
   }
 
   announceGift(nickname, giftName, count) {
-    if (!this.enabled || !this.synth) return;
+    if (!this.enabled) return;
 
-    const cleanNick = nickname.replace(/[\d_.-]+/g, ' ').trim() || 'Thí chủ';
-    const text = `Cảm ơn đại thí chủ ${cleanNick} đã phát tâm cúng dường ${count} ${giftName}. A Di Đà Phật, công đức vô lượng!`;
+    let audioPath = '/audio_tts/blessing_general.mp3';
+    const gLower = (giftName || '').toLowerCase();
+    if (gLower.includes('rose') || gLower.includes('hồng')) {
+      audioPath = '/audio_tts/blessing_rose.mp3';
+    } else if (gLower.includes('lion') || gLower.includes('sư tử')) {
+      audioPath = '/audio_tts/blessing_lion.mp3';
+    } else if (gLower.includes('universe') || gLower.includes('vũ trụ')) {
+      audioPath = '/audio_tts/blessing_universe.mp3';
+    }
 
-    const utter = new SpeechSynthesisUtterance(text);
-    if (this.voice) utter.voice = this.voice;
-    utter.rate = 0.95;
-    utter.pitch = 1.0;
-    utter.volume = 0.95;
+    this.playAudioFile(audioPath);
+  }
 
-    this.synth.cancel();
-    this.synth.speak(utter);
+  playAudioFile(audioPath) {
+    try {
+      const audio = new Audio(audioPath);
+      audio.volume = 0.95;
+      audio.play().catch(err => {
+        console.log('[TTS] Autoplay restriction:', err);
+      });
+    } catch (e) {
+      console.error('[TTS] Play failed:', e);
+    }
   }
 }
 
@@ -239,22 +254,22 @@ class TempleAmbientCanvas {
 
   initParticles() {
     this.particles = [];
-    // 55 particles: Volumetric incense smoke & Golden energy motes
-    for (let i = 0; i < 55; i++) {
+    // Ultra-light 16 particles: 0% GPU load
+    for (let i = 0; i < 16; i++) {
       this.particles.push(this.createParticle(true));
     }
   }
 
   createParticle(randomY = false) {
-    const isLightMote = Math.random() > 0.45; // 55% golden sparkle motes, 45% incense smoke
+    const isLightMote = Math.random() > 0.4;
     return {
       type: isLightMote ? 'light' : 'smoke',
-      x: isLightMote ? Math.random() * this.width : (this.width / 2 + (Math.random() - 0.5) * 110),
-      y: randomY ? Math.random() * this.height : (isLightMote ? this.height + 15 : this.height * 0.42),
-      size: isLightMote ? Math.random() * 3 + 1 : Math.random() * 8 + 5,
-      speedY: isLightMote ? -(Math.random() * 1.2 + 0.4) : -(Math.random() * 0.9 + 0.6),
-      speedX: (Math.random() - 0.5) * (isLightMote ? 0.7 : 0.8),
-      opacity: isLightMote ? Math.random() * 0.7 + 0.3 : Math.random() * 0.22 + 0.08,
+      x: isLightMote ? Math.random() * this.width : (this.width / 2 + (Math.random() - 0.5) * 80),
+      y: randomY ? Math.random() * this.height : (isLightMote ? this.height + 10 : this.height * 0.45),
+      size: isLightMote ? Math.random() * 2 + 1 : Math.random() * 6 + 4,
+      speedY: isLightMote ? -(Math.random() * 0.8 + 0.3) : -(Math.random() * 0.6 + 0.4),
+      speedX: (Math.random() - 0.5) * 0.4,
+      opacity: isLightMote ? Math.random() * 0.6 + 0.3 : Math.random() * 0.15 + 0.05,
       wobbleOffset: Math.random() * Math.PI * 2
     };
   }
@@ -262,39 +277,31 @@ class TempleAmbientCanvas {
   animate() {
     this.ctx.clearRect(0, 0, this.width, this.height);
 
-    this.particles.forEach(p => {
+    for (let i = 0; i < this.particles.length; i++) {
+      const p = this.particles[i];
       p.y += p.speedY;
-      p.x += p.speedX + Math.sin(p.y * 0.012 + p.wobbleOffset) * 0.5;
+      p.x += p.speedX;
 
       // Wrap around
-      if (p.y < -30) {
-        p.y = this.height + 20;
-        p.x = p.type === 'smoke' ? (this.width / 2 + (Math.random() - 0.5) * 110) : Math.random() * this.width;
+      if (p.y < -20) {
+        p.y = this.height + 10;
+        p.x = p.type === 'smoke' ? (this.width / 2 + (Math.random() - 0.5) * 80) : Math.random() * this.width;
       }
 
-      this.ctx.save();
       this.ctx.globalAlpha = p.opacity;
 
       if (p.type === 'light') {
-        // Sacred Lotus Sparkle / Golden Energy Mote
         this.ctx.fillStyle = '#ffe680';
-        this.ctx.shadowBlur = 8;
-        this.ctx.shadowColor = '#f59e0b';
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         this.ctx.fill();
       } else {
-        // Subtle Incense Smoke Wisp
-        p.size += 0.02;
-        this.ctx.fillStyle = 'rgba(215, 195, 175, 0.12)';
-        this.ctx.shadowBlur = 8;
-        this.ctx.shadowColor = 'rgba(245, 194, 66, 0.3)';
+        this.ctx.fillStyle = 'rgba(230, 210, 190, 0.1)';
         this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, p.size * 1.6, 0, Math.PI * 2);
+        this.ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
         this.ctx.fill();
       }
-      this.ctx.restore();
-    });
+    }
 
     requestAnimationFrame(() => this.animate());
   }
@@ -396,6 +403,20 @@ class TempleApp {
 
     this.socket.on('stream:event', ({ type, data }) => {
       this.handleStreamEvent(type, data);
+    });
+
+    this.socket.on('audio:bgm', ({ action, track }) => {
+      if (action === 'play') {
+        if (track) this.audio.setBgmTrack(track);
+        this.audio.musicEnabled = false;
+        this.audio.toggleAmbientMusic();
+      } else if (action === 'stop') {
+        this.audio.stopAmbientMusic();
+      }
+    });
+
+    this.socket.on('audio:tts_test', ({ preset }) => {
+      this.announcer.playAudioFile('/audio_tts/' + (preset || 'blessing_general.mp3'));
     });
   }
 
