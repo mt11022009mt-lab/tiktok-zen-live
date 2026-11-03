@@ -104,43 +104,80 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.emit('sim:like', { count: 50 });
   });
 
+  const adminBgmPlayer = document.getElementById('admin-bgm-player');
+  const bgmStatusText = document.getElementById('bgm-status-text');
+  const adminBgmVol = document.getElementById('admin-bgm-vol');
+  const adminVolLabel = document.getElementById('admin-vol-label');
+
+  if (adminBgmVol && adminBgmPlayer) {
+    adminBgmVol.addEventListener('input', () => {
+      adminBgmPlayer.volume = parseFloat(adminBgmVol.value);
+      if (adminVolLabel) adminVolLabel.textContent = Math.round(adminBgmVol.value * 100) + '%';
+    });
+  }
+
+  function playAdminVoice(voiceFile) {
+    try {
+      const audio = new Audio(voiceFile);
+      audio.volume = 0.95;
+      audio.play().catch(e => console.log('Audio play error:', e));
+    } catch(err) {}
+  }
+
   btnGiftRose.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Hoa Hồng', diamonds: 1, count: 1 } });
+    playAdminVoice('/audio_tts/blessing_rose.mp3');
   });
 
   btnGiftBell.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Chuông Bát', diamonds: 20, count: 1 } });
+    playAdminVoice('/audio_tts/blessing_general.mp3');
   });
 
   btnGiftIncense.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Nụ Trầm VIP', diamonds: 99, count: 1 } });
+    playAdminVoice('/audio_tts/blessing_lion.mp3');
   });
 
   btnGiftUniverse.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Vũ Trụ Cực Lạc', diamonds: 5000, count: 1 } });
+    playAdminVoice('/audio_tts/blessing_universe.mp3');
   });
 
-  // Background Music & TTS Handlers
+  // Background Music & TTS Handlers (Phát ngay trên trang Admin để nghe trực tiếp)
   if (btnBgmChant) {
     btnBgmChant.addEventListener('click', () => {
+      if (adminBgmPlayer) {
+        adminBgmPlayer.src = '/assets/nam_mo_a_di_da_phat.mp3';
+        adminBgmPlayer.play().catch(e => console.log('Play err:', e));
+      }
+      if (bgmStatusText) bgmStatusText.textContent = 'Trạng thái nhạc: 🎶 Đang phát Nam Mô A Di Đà Phật (Tiếng Việt)';
       socket.emit('admin:bgm', { action: 'play', track: '/assets/nam_mo_a_di_da_phat.mp3' });
     });
   }
 
   if (btnBgmZen) {
     btnBgmZen.addEventListener('click', () => {
+      if (adminBgmPlayer) {
+        adminBgmPlayer.src = '/assets/zen_meditation.mp3';
+        adminBgmPlayer.play().catch(e => console.log('Play err:', e));
+      }
+      if (bgmStatusText) bgmStatusText.textContent = 'Trạng thái nhạc: 🌿 Đang phát Nhạc Thiền Sáo Trúc';
       socket.emit('admin:bgm', { action: 'play', track: '/assets/zen_meditation.mp3' });
     });
   }
 
   if (btnBgmStop) {
     btnBgmStop.addEventListener('click', () => {
+      if (adminBgmPlayer) adminBgmPlayer.pause();
+      if (bgmStatusText) bgmStatusText.textContent = 'Trạng thái nhạc: ⏹️ Đang tắt';
       socket.emit('admin:bgm', { action: 'stop' });
     });
   }
 
   if (btnTestTts) {
     btnTestTts.addEventListener('click', () => {
+      playAdminVoice('/audio_tts/blessing_general.mp3');
       socket.emit('admin:test_tts', { preset: 'blessing_general.mp3' });
     });
   }

@@ -3,6 +3,16 @@
 // High-Art Cinematic Zen Engine with Gemini 4 Argon Architecture
 // ============================================================
 
+// Vô hiệu hóa triệt để Web SpeechSynthesis để chặn hoàn toàn giọng robot tiếng Anh của Windows
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  try {
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak = function() {
+      console.log('[TTS] Legacy speechSynthesis blocked. Playing 100% native Vietnamese audio MP3.');
+    };
+  } catch(e) {}
+}
+
 // 1. WEB AUDIO API SYNTHESIZER (Chuông Chùa, Mõ Gỗ, Nhạc Thiền 432Hz)
 class TempleAudioEngine {
   constructor() {

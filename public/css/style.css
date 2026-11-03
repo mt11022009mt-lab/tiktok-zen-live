@@ -513,13 +513,13 @@ html, body {
   filter: drop-shadow(0 0 3px #ffd700);
 }
 
-/* VIP Avatar Styling */
+/* VIP Avatar Styling - GPU Accelerated */
 .seat-item.tier-vip .seat-avatar-wrap {
   width: 66px;
   height: 66px;
   border: 2.5px solid var(--gold-bright);
-  box-shadow: 0 0 25px rgba(245, 194, 66, 0.95);
-  animation: vipAvatarFloat 3.5s ease-in-out infinite alternate;
+  box-shadow: 0 0 16px rgba(245, 194, 66, 0.85);
+  will-change: transform;
 }
 
 .seat-item.tier-vip .monk-robe-collar {
@@ -532,16 +532,11 @@ html, body {
   font-size: 13px;
 }
 
-@keyframes vipAvatarFloat {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-6px); }
-}
-
 .seat-item.tier-vip .vip-crown {
   position: absolute;
   top: -18px;
   font-size: 20px;
-  filter: drop-shadow(0 0 8px #ffd700);
+  filter: drop-shadow(0 0 6px #ffd700);
   z-index: 5;
 }
 
@@ -550,7 +545,8 @@ html, body {
   width: 58px;
   height: 58px;
   border: 2px solid #34d399;
-  box-shadow: 0 0 16px var(--jade-glow);
+  box-shadow: 0 0 12px var(--jade-glow);
+  will-change: transform;
 }
 
 .seat-item.tier-advanced .monk-robe-collar {
@@ -563,25 +559,19 @@ html, body {
   width: 50px;
   height: 50px;
   border: 2px solid rgba(245, 194, 66, 0.55);
+  will-change: transform;
 }
 
 /* Empty Seat (Đài Sen Chờ Thí Chủ - Sáng Đẹp Mắt) */
 .seat-item.is-empty .seat-avatar-wrap {
   background: radial-gradient(circle, rgba(60, 20, 30, 0.7) 0%, rgba(20, 5, 10, 0.8) 100%);
   border: 1.5px dashed rgba(245, 194, 66, 0.6);
-  box-shadow: 0 0 12px rgba(245, 194, 66, 0.25);
 }
 
 .seat-item.is-empty .empty-lotus-icon {
   font-size: 24px;
   opacity: 0.85;
-  filter: drop-shadow(0 0 6px rgba(245, 194, 66, 0.8));
-  animation: emptyLotusPulse 2.8s ease-in-out infinite alternate;
-}
-
-@keyframes emptyLotusPulse {
-  0% { transform: scale(0.92); opacity: 0.7; filter: drop-shadow(0 0 4px rgba(245, 194, 66, 0.6)); }
-  100% { transform: scale(1.12); opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 230, 130, 0.95)); }
+  filter: drop-shadow(0 0 4px rgba(245, 194, 66, 0.7));
 }
 
 /* User Name Pill */
