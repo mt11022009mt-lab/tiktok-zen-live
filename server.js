@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
+const { spawn } = require('child_process');
 const { TikTokLiveConnection } = require('tiktok-live-connector');
 
 const app = express();
@@ -312,9 +313,123 @@ function updateTopDonators(uniqueId, nickname, avatarUrl, diamonds) {
 }
 
 // ==========================================
-// TIKTOK LIVE CONNECTION MANAGER
+// TIKTOK LIVE CONNECTION MANAGER (DUAL ENGINE: PYTHON BRIDGE + NODE CONNECTOR)
 // ==========================================
 let tiktokLive = null;
+let pythonBridgeProcess = null;
+
+// Webhook Endpoints from Python Bridge
+app.post('/api/webhook/connect', (req, res) => {
+  const { username, roomId } = req.body;
+  state.isConnecting = false;
+  state.isConnected = true;
+  console.log(`[Python Bridge] Đã kết nối thành công phòng live của: ${username} (Room: ${roomId})`);
+  broadcastEvent('system:connected', { username, roomId });
+  broadcastState();
+  res.json({ ok: true });
+});
+
+app.post('/api/webhook/chat', (req, res) => {
+  const { uniqueId, nickname, comment, profilePictureUrl } = req.body;
+  const userData = {
+    uniqueId,
+    nickname,
+    avatarUrl: profilePictureUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(uniqueId)}`
+  };
+  const result = assignSeatForUser(userData, 'standard');
+  broadcastEvent('user:chat', {
+    user: userData,
+    comment,
+    seatResult: result
+  });
+  broadcastState();
+  res.json({ ok: true });
+});
+
+app.post('/api/webhook/like', (req, res) => {
+  const { uniqueId, nickname, likeCount, totalLikes, profilePictureUrl } = req.body;
+  const addedLikes = likeCount || 1;
+  state.stats.totalLikes = totalLikes || (state.stats.totalLikes + addedLikes);
+  state.stats.gongCount += 1;
+
+  const userData = {
+    uniqueId,
+    nickname,
+    avatarUrl: profilePictureUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(uniqueId)}`,
+    likesGiven: addedLikes
+  };
+  const result = assignSeatForUser(userData, 'standard');
+
+  broadcastEvent('user:like', {
+    uniqueId,
+    nickname,
+    likeCount: addedLikes,
+    totalLikes: state.stats.totalLikes,
+    seatResult: result
+  });
+  broadcastState();
+  res.json({ ok: true });
+});
+
+app.post('/api/webhook/gift', (req, res) => {
+  const { uniqueId, nickname, giftName, repeatCount, diamondCount, profilePictureUrl } = req.body;
+  const count = repeatCount || 1;
+  const diamonds = diamondCount || 1;
+
+  state.stats.totalGifts += count;
+  state.stats.totalDiamonds += diamonds;
+  state.stats.gongCount += 2;
+
+  const userData = {
+    uniqueId,
+    nickname,
+    avatarUrl: profilePictureUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(uniqueId)}`,
+    diamondSpent: diamonds
+  };
+
+  updateTopDonators(uniqueId, nickname, userData.avatarUrl, diamonds);
+
+  const tierPriority = diamonds >= state.settings.vipThreshold ? 'vip' : 'advanced';
+  const result = assignSeatForUser(userData, tierPriority);
+
+  broadcastEvent('user:gift', {
+    user: userData,
+    giftName: giftName || 'Hoa Hồng',
+    giftCount: count,
+    diamondCount: diamonds,
+    seatResult: result
+  });
+  broadcastState();
+  res.json({ ok: true });
+});
+
+app.post('/api/webhook/join', (req, res) => {
+  const { uniqueId, nickname, profilePictureUrl } = req.body;
+  const userData = {
+    uniqueId,
+    nickname,
+    avatarUrl: profilePictureUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(uniqueId)}`
+  };
+  const result = assignSeatForUser(userData, 'standard');
+
+  broadcastEvent('user:join', {
+    uniqueId,
+    nickname,
+    seatResult: result
+  });
+  broadcastState();
+  res.json({ ok: true });
+});
+
+app.post('/api/webhook/error', (req, res) => {
+  const { message } = req.body;
+  state.isConnecting = false;
+  state.isConnected = false;
+  console.error(`[Python Bridge Error]:`, message);
+  broadcastEvent('system:error', { message: `Lỗi kết nối TikTok: ${message}` });
+  broadcastState();
+  res.json({ ok: true });
+});
 
 function connectTikTok(username) {
   if (!username) return;
@@ -324,139 +439,53 @@ function connectTikTok(username) {
   state.isConnected = false;
   broadcastState();
 
-  if (tiktokLive) {
-    try { tiktokLive.disconnect(); } catch (e) {}
-  }
+  disconnectTikTok();
 
+  // Khởi động Python Bridge kết nối TikTok Live (Bypass EulerStream 100%)
   try {
-    tiktokLive = new TikTokLiveConnection(username, {
-      processInitialData: true,
-      enableExtendedGiftInfo: true
+    const bridgePath = path.join(__dirname, 'bridge.py');
+    console.log(`[TikTok Bridge] Spawning Python client for @${username}...`);
+    pythonBridgeProcess = spawn('python', [bridgePath, username]);
+
+    pythonBridgeProcess.stdout.on('data', data => {
+      console.log(`[Bridge Out]: ${data.toString().trim()}`);
     });
 
-    tiktokLive.connect().then(roomInfo => {
-      state.isConnecting = false;
-      state.isConnected = true;
-      state.stats.viewers = roomInfo.roomUserCount || roomInfo.userCount || 0;
-      console.log(`[TikTok Live] Đã kết nối thành công phòng live của: ${username}`);
-      broadcastEvent('system:connected', { username, roomInfo });
-      broadcastState();
-    }).catch(err => {
-      state.isConnecting = false;
-      state.isConnected = false;
-      console.error(`[TikTok Live] Lỗi kết nối tới ${username}:`, err.message || err);
-      broadcastEvent('system:error', { message: `Không thể kết nối tới @${username}: ${err.message || 'Có thể kênh chưa bật live hoặc bị giới hạn IP'}` });
-      broadcastState();
+    pythonBridgeProcess.stderr.on('data', data => {
+      console.error(`[Bridge Err]: ${data.toString().trim()}`);
     });
 
-    // Chat event
-    tiktokLive.on('chat', data => {
-      const userData = {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname,
-        avatarUrl: data.profilePictureUrl
-      };
-      const result = assignSeatForUser(userData, 'standard');
-      broadcastEvent('user:chat', {
-        user: userData,
-        comment: data.comment,
-        seatResult: result
-      });
-      broadcastState();
+    pythonBridgeProcess.on('close', code => {
+      console.log(`[Bridge Closed] Process exited with code ${code}`);
+      if (state.isConnecting) {
+        state.isConnecting = false;
+        state.isConnected = false;
+        broadcastEvent('system:error', { message: `Tiến trình kết nối với @${username} đã dừng.` });
+        broadcastState();
+      }
     });
-
-    // Gift event
-    tiktokLive.on('gift', data => {
-      // Check if streak finished or standalone gift
-      const diamondCount = (data.diamondCount || 1) * (data.repeatCount || 1);
-      state.stats.totalGifts += (data.repeatCount || 1);
-      state.stats.totalDiamonds += diamondCount;
-      state.stats.gongCount += 1;
-
-      const userData = {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname,
-        avatarUrl: data.profilePictureUrl,
-        diamondSpent: diamondCount
-      };
-
-      updateTopDonators(data.uniqueId, data.nickname, data.profilePictureUrl, diamondCount);
-
-      // Upgrade/assign seat with VIP priority if diamonds >= threshold
-      const tierPriority = diamondCount >= state.settings.vipThreshold ? 'vip' : 'advanced';
-      const result = assignSeatForUser(userData, tierPriority);
-
-      broadcastEvent('user:gift', {
-        user: userData,
-        giftName: data.giftName || 'Hoa Hồng',
-        giftId: data.giftId,
-        giftCount: data.repeatCount || 1,
-        diamondCount: diamondCount,
-        seatResult: result
-      });
-      broadcastState();
-    });
-
-    // Like event -> Người thả tim được vào ngồi ghế ngay nếu còn chỗ
-    tiktokLive.on('like', data => {
-      const addedLikes = data.likeCount || 1;
-      state.stats.totalLikes += addedLikes;
-      state.stats.gongCount += 1;
-
-      const userData = {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname,
-        avatarUrl: data.profilePictureUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.uniqueId)}`,
-        likesGiven: addedLikes
-      };
-      const result = assignSeatForUser(userData, 'standard');
-
-      broadcastEvent('user:like', {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname,
-        likeCount: addedLikes,
-        totalLikes: state.stats.totalLikes,
-        seatResult: result
-      });
-      broadcastState();
-    });
-
-    // Member join -> Người mới vào phòng được xếp vào ghế ngồi luôn nếu còn chỗ
-    tiktokLive.on('member', data => {
-      const userData = {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname,
-        avatarUrl: data.profilePictureUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.uniqueId)}`
-      };
-      const result = assignSeatForUser(userData, 'standard');
-
-      broadcastEvent('user:join', {
-        uniqueId: data.uniqueId,
-        nickname: data.nickname,
-        seatResult: result
-      });
-      broadcastState();
-    });
-
-    // Viewer count
-    tiktokLive.on('roomUser', data => {
-      state.stats.viewers = data.viewerCount || state.stats.viewers;
-      broadcastState();
-    });
-
-    tiktokLive.on('streamEnd', () => {
-      state.isConnected = false;
-      broadcastEvent('system:streamEnd', {});
-      broadcastState();
-    });
-
   } catch (err) {
+    console.error('[TikTok Bridge Spawn Error]:', err);
     state.isConnecting = false;
     state.isConnected = false;
-    console.error('[TikTok Live] Lỗi khởi tạo connection:', err);
-    broadcastEvent('system:error', { message: err.message });
     broadcastState();
   }
+}
+
+function disconnectTikTok() {
+  if (pythonBridgeProcess) {
+    try {
+      pythonBridgeProcess.kill();
+      pythonBridgeProcess = null;
+    } catch (e) {}
+  }
+  if (tiktokLive) {
+    try { tiktokLive.disconnect(); } catch (e) {}
+    tiktokLive = null;
+  }
+  state.isConnected = false;
+  state.isConnecting = false;
+  broadcastState();
 }
 
 function disconnectTikTok() {
