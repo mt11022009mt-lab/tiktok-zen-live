@@ -397,32 +397,46 @@ function connectTikTok(username) {
       broadcastState();
     });
 
-    // Like event
+    // Like event -> Người thả tim được vào ngồi ghế ngay nếu còn chỗ
     tiktokLive.on('like', data => {
       const addedLikes = data.likeCount || 1;
       state.stats.totalLikes += addedLikes;
       state.stats.gongCount += 1;
 
-      // Update user likes if seated
-      const seatIdx = findUserSeatIndex(data.uniqueId);
-      if (seatIdx !== -1) {
-        state.seats[seatIdx].user.likesGiven = (state.seats[seatIdx].user.likesGiven || 0) + addedLikes;
-        state.seats[seatIdx].user.lastActive = Date.now();
-      }
+      const userData = {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname,
+        avatarUrl: data.profilePictureUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.uniqueId)}`,
+        likesGiven: addedLikes
+      };
+      const result = assignSeatForUser(userData, 'standard');
 
       broadcastEvent('user:like', {
         uniqueId: data.uniqueId,
         nickname: data.nickname,
         likeCount: addedLikes,
-        totalLikes: state.stats.totalLikes
+        totalLikes: state.stats.totalLikes,
+        seatResult: result
       });
       broadcastState();
     });
 
-    // Member join
+    // Member join -> Người mới vào phòng được xếp vào ghế ngồi luôn nếu còn chỗ
     tiktokLive.on('member', data => {
+      const userData = {
+        uniqueId: data.uniqueId,
+        nickname: data.nickname,
+        avatarUrl: data.profilePictureUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.uniqueId)}`
+      };
+      const result = assignSeatForUser(userData, 'standard');
+
       broadcastEvent('user:join', {
         uniqueId: data.uniqueId,
+        nickname: data.nickname,
+        seatResult: result
+      });
+      broadcastState();
+    });
         nickname: data.nickname,
         avatarUrl: data.profilePictureUrl
       });

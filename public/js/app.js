@@ -172,6 +172,9 @@ class TempleAudioEngine {
       oscs.push(osc);
     });
 
+    this.ambientNodes = { master, oscs };
+  }
+
   // Toggle Background Music Player (Nhạc Niệm Phật & Nhạc Thiền Tiếng Việt)
   toggleAmbientMusic() {
     const player = document.getElementById('bgm-player');
