@@ -1,61 +1,38 @@
-# 🌸 CHÁNH ĐIỆN TỊNH TÂM - TIKTOK LIVE INTERACTIVE STREAM ENGINE 🌸
+# Tịnh tâm thiền đường — TikTok LIVE
 
-Hệ thống Livestream Tương Tác Chánh Điện / Thiền Viện Online dành cho TikTok Live Studio & OBS Studio. 
-Tự động bắt sự kiện người xem bình luận, thả tim và tặng quà (donate) để cấp bồ đoàn tĩnh tọa, thăng tòa VIP Sen Vàng, rền chuông Đại Hồng Chung và AI xướng danh công đức.
+Trang dọc 9:16 cho OBS, có 24 chỗ ngồi. Khi nhận sự kiện người xem vào phòng, bình luận hoặc tặng quà, người đó được xếp chỗ và hiệu ứng xuất hiện ngay trên ghế. Số liệu và bảng tri ân bắt đầu từ 0. Nút giả lập trong trang quản trị chỉ để thử trước khi live.
 
----
+## Mở trên máy này
 
-## 🚀 1. Hướng Dẫn Khởi Động Nhanh (1-Click)
+1. Đóng cửa sổ `node server.js` cũ nếu đang chạy. Mở `start.bat` trong thư mục này. Nếu máy báo cổng 3000 đang bận, tìm cửa sổ server cũ thay vì chạy thêm bản thứ hai.
+2. Mở `http://localhost:3000/admin.html`. Ở đây có nút giả lập một người vào ngồi và nút xóa ghế.
+3. Mở `http://localhost:3000/?layout=vertical` để xem trước. Đường dẫn dán vào OBS là **`http://localhost:3000/obs`**; đường dẫn này tự mở khung dọc và ẩn các nút điều khiển khỏi video.
+4. Sau khi đã bắt đầu phiên TikTok LIVE, nhập `@username` vào trang quản trị và bấm kết nối. Trạng thái phải chuyển sang **Đang live**. Nếu chưa phát live hoặc TikTok không cho phép đọc sự kiện, ghế sẽ không nhận người thật.
 
-1. Mở thư mục dự án: `C:\Users\Administrator\.gemini\antigravity\scratch\tiktok-zen-live`
-2. Nhấp đúp vào file **`start.bat`** (hoặc mở Terminal chạy `node server.js`).
-3. Màn hình console sẽ hiện:
-   - 📺 **Màn hình Overlay Chánh Điện (Cho OBS):** `http://localhost:3000/?layout=vertical`
-   - 🎛️ **Bảng Điều Khiển & Giả Lập Test (Admin):** `http://localhost:3000/admin.html`
+Nếu chuyển sang máy khác: cài Node.js và Python, rồi trong thư mục dự án chạy `npm install` và `python -m pip install TikTokLive requests` trước khi mở `start.bat`.
 
----
+## Phát bằng OBS, không cần TikTok LIVE Studio
 
-## 📹 2. Hướng Dẫn Thêm Vào OBS Studio / TikTok LIVE Studio
+1. Kiểm tra tài khoản TikTok có mục phát từ PC/Mac hoặc quyền lấy **RTMP server và stream key**. Quyền này do TikTok cấp cho từng tài khoản/khu vực; trang HTML không tự phát lên TikTok được.
+2. Trong OBS: tạo Scene dọc, đặt cả **Base Canvas** và **Output** là `720 × 1280`, `30 FPS` để bắt đầu nhẹ máy. Thêm đúng một **Browser Source** với URL `http://localhost:3000/obs`, Width `720`, Height `1280`. Nếu máy khỏe và chữ cần nét hơn, dùng `1080 × 1920`.
+3. OBS → Settings → Stream → chọn Custom, dán RTMP server và stream key của **phiên hiện tại**. Giữ stream key riêng tư.
+4. OBS → Settings → Output → chọn bộ mã hóa phần cứng H.264 nếu có: NVIDIA NVENC, Intel QSV hoặc AMD AMF. Bắt đầu với bitrate video khoảng `2500–3500 Kbps` cho `720 × 1280 @ 30 FPS`, âm thanh AAC `128 Kbps`.
+5. Trong thuộc tính Browser Source của OBS, bật **Control audio via OBS**. Nhạc Tịnh Tâm tự bật ở mức nhỏ. Bình luận thường gõ một tiếng mõ ngắn, người mới vào ngồi có chuông trầm riêng; nhạc tự hạ khi có tiếng chuông hoặc giọng cảm ơn. Kiểm tra thanh âm lượng Browser Source trước khi bấm **Start Streaming**. Tránh mở thêm tab overlay trong Chrome lúc live vì sẽ phát hai bản âm thanh và tốn RAM.
 
-1. Mở **OBS Studio** (hoặc **TikTok LIVE Studio**).
-2. Tại khung **Sources (Nguồn)**, bấm dấu **`+`** -> Chọn **Browser (Trình duyệt)**.
-3. Đặt tên nguồn: `ChanhDienLive`.
-4. Cài đặt các thông số:
-   * **URL:** `http://localhost:3000/?layout=vertical` *(Khung Dọc)* hoặc `http://localhost:3000/?layout=horizontal` *(Khung Ngang)*.
-   * **Width (Chiều rộng):** `1080` (Dọc) hoặc `1920` (Ngang).
-   * **Height (Chiều cao):** `1920` (Dọc) hoặc `1080` (Ngang).
-   * **FPS:** `30` hoặc `60`.
-   * **Tích chọn:** *Control audio via OBS* (Để nghe tiếng chuông mõ qua OBS) và *Shutdown source when not visible*.
-5. Bấm **OK**. Màn hình Chánh Điện lung linh sẽ hiện ra ngay lập tức!
+Nếu tài khoản không có RTMP/stream key, không thể dùng trực tiếp cách OBS → RTMP. Một số tài khoản TikTok Shop có thể dùng **LIVE Manager + OBS Virtual Camera**; tùy quyền tài khoản. OBS Virtual Camera chỉ đưa hình, nên cần chọn nguồn âm thanh riêng trong LIVE Manager.
 
----
+## Kiểm tra nhanh
 
-## 🎮 3. Cách Sử Dụng Bảng Điều Khiển Admin (Giả Lập & Live Thật)
+- Nhấn **1 Người Cmt Vào Ngồi** trong trang quản trị: ghế phải sáng lên, hiện tên và số chỗ ngồi tăng.
+- Nhấn **Thử tiếng bình luận trên OBS** và **Thử chuông người vào ngồi**: thanh âm lượng Browser Source phải nhảy. Nếu trang quản trị báo bị chặn âm, trong OBS nhấp chuột phải nguồn Browser → **Interact** → nhấp một lần vào hình để mở âm thanh.
+- Ba thanh trượt ở trang quản trị chỉnh riêng nhạc nền, chuông/mõ và giọng cảm ơn ngay khi đang live. Nếu phòng chat đông, tiếng mõ được giới hạn nhịp để không lấn phần thiền.
+- Trình phát trong trang quản trị chỉ để nghe thử trên tab đó. Nút bật/tắt nhạc điều khiển overlay trong OBS, tránh phát hai bản cùng lúc.
+- Nhấn **Thanh Tịnh** để xóa người giả lập trước khi live thật.
+- Nếu OBS hiện giao diện cũ, bấm **Refresh cache of current page** trong thuộc tính Browser Source.
+- Nếu không nhận người: xem trạng thái kết nối và nhật ký ở trang quản trị, kiểm tra TikTok LIVE đã bắt đầu chưa.
 
-Truy cập: **`http://localhost:3000/admin.html`** trên trình duyệt Chrome/Edge:
+Lưu ý: các sự kiện TikTok được nhận qua thư viện `TikTokLive` không chính thức, nên TikTok thay đổi có thể làm kết nối ngừng hoạt động. Không có bảo đảm 100% sẽ bắt được mọi người vào phòng.
 
-1. **Bộ Giả Lập (Test trước khi live thật):**
-   * **👥 Lấp đầy 12 bồ đoàn ngay:** Tự động sinh 12 thiền sinh ảo vào ngồi để xem layout đẹp mắt.
-   * **💬 1 Người Cmt vào ngồi:** Thử nghiệm người mới bình luận chiếm 1 chỗ ngồi.
-   * **💖 Thả Tim / Gõ Mõ:** Kích hoạt tiếng mõ cốc cốc và các thiền sinh cúi lạy Phật.
-   * **🎁 Tặng Quà Cúng Dường (Hoa Hồng, Trầm Hương, Vũ Trụ):**
-     * Avatar người donate phóng to giữa màn hình.
-     * Tiếng Chuông Đại Hồng Chung ngân vang sâu lắng.
-     * Giọng đọc AI tự động cảm ơn và chúc bình an.
-     * Thăng hạng lên **Bồ Đoàn Sen Vàng VIP** có vầng hào quang lộng lẫy.
-2. **Khi Kênh Đang Bật Live Thật:**
-   * Nhập username TikTok (ví dụ: `thaythichthien`) vào ô `@username`.
-   * Bấm **Bắt Đầu Kết Nối Live**. Hệ thống sẽ tự động bắt luồng WebSocket thật 100%.
+## Cách chọn âm thanh
 
----
-
-## ⚠️ 5. Đánh Giá Thực Tế Về Thử Nghiệm Cloud Stream (GitHub Actions)
-
-Mô hình chạy stream qua GitHub Actions được thiết lập như **một giải pháp thử nghiệm kỹ thuật**, KHÔNG nên xem là hạ tầng phát sóng 24/7 ổn định thay thế cho máy chủ chuyên dụng vì các lý do sau:
-
-1. **Vòng đời Stream Key của TikTok:** Trên TikTok, Stream Key thường chỉ có hiệu lực cho một phiên phát sóng duy nhất. Khi một phiên ngắt (dù chỉ vài giây), phiên live có thể bị TikTok tự động đóng, dẫn tới việc dùng lại key cũ cho phiên tiếp theo sẽ thất bại.
-2. **Độ trễ và giới hạn của CI/CD:** GitHub Actions sinh ra để build/test code, không phải đài truyền hình. Các tác vụ cron có độ trễ thực tế từ 15-45 phút và có thể bị trôi lịch hoặc hủy khi hệ thống quá tải.
-3. **Chính sách sử dụng chấp nhận được (AUP):** Việc liên tục sử dụng tài nguyên CI/CD miễn phí để mã hóa video phát trực tiếp dài hạn có thể vi phạm điều khoản chống lạm dụng tài nguyên của nền tảng.
-
-👉 **Khuyến nghị chuẩn sản xuất:**
-- **Để phát sóng 24/7 chuyên nghiệp và lâu dài:** Hãy sử dụng **OBS Studio chạy trên Cloud VPS Windows riêng biệt** (hoặc một máy tính phụ/laptop cắm mạng ở nhà). Cách này đảm bảo không bao giờ bị cắt luồng, giữ vững phiên live và an toàn 100% cho kênh.
+Các buổi thiền chuông công khai của Japan Foundation dùng tiếng chuông có âm ngân dài và để khoảng yên giữa các lần gõ: https://www.la.jpf.go.jp/ac-others65-virtualmeditation. Hai bộ live chánh điện công khai tách tiếng mõ, chuông, giọng đọc theo từng loại tương tác và hạ nhạc lúc có lời nói: https://github.com/zane-tv/tiktok-live-temple-rpc và https://github.com/thonh14/chua-online. Bản này áp dụng cách phân vai đó cho phòng thiền có ghế ngồi; các file nhạc và tiếng chuông/mõ mới được tạo riêng cho dự án, không lấy âm thanh từ các nguồn trên.

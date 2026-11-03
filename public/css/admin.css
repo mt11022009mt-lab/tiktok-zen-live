@@ -477,3 +477,7 @@ label {
 .log-entry.chat {
   color: #fff;
 }
+.audio-levels input[type="range"] {
+  width: 100%;
+  accent-color: #d7b778;
+}

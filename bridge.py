@@ -1,5 +1,6 @@
 import sys
 import asyncio
+import os
 import requests
 from TikTokLive import TikTokLiveClient
 from TikTokLive.events import ConnectEvent, CommentEvent, LikeEvent, GiftEvent, JoinEvent
@@ -9,7 +10,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 USERNAME = sys.argv[1].replace('@', '').strip()
-SERVER_URL = "http://localhost:3000/api/webhook"
+SERVER_URL = f"http://localhost:{os.environ.get('ZEN_LIVE_PORT', '3000')}/api/webhook"
 
 print(f"[Python Bridge] Initializing TikTok connection for: {USERNAME}")
 client = TikTokLiveClient(unique_id=USERNAME)

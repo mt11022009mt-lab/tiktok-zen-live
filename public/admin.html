@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/admin.css?v=20261103_7">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -29,9 +29,9 @@
 
     <!-- Hướng Dẫn Cập Nhật Nhanh -->
     <div style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(16, 185, 129, 0.2)); border: 1.5px solid #f59e0b; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; color: #fef08a; font-size: 13.5px; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-      🔔 <strong>HƯỚNG DẪN ĐỒNG BỘ ÂM THANH TIẾNG VIỆT 100%:</strong><br>
-      • <strong>Trang Admin này:</strong> Nhấn phím <strong>Ctrl + F5</strong> để làm mới hoàn toàn bộ phát âm thanh.<br>
-      • <strong>Trong TikTok LIVE Studio:</strong> Nhấp <strong>chuột phải</strong> vào nguồn <strong>Link</strong> &gt; Chọn <strong>Reset</strong> (hoặc Reload) để xóa sạch giọng tiếng Anh cũ của Windows!
+      🔔 <strong>TRƯỚC KHI PHÁT:</strong><br>
+      • Mở overlay trong OBS bằng đường dẫn ở khung bên dưới; chỉ cần một nguồn Browser.<br>
+      • Nhấn thử nút giả lập người vào ngồi và kiểm tra cả hình lẫn âm thanh trên OBS.
     </div>
 
     <!-- Main Grid -->
@@ -88,23 +88,35 @@
           <p class="section-desc">Bấm các nút dưới đây để mô phỏng người xem thật vào cmt, thả tim và donate quà:</p>
 
           <div class="sim-category" style="background: rgba(245, 194, 66, 0.12); padding: 14px; border-radius: 12px; border: 1.5px solid rgba(245, 194, 66, 0.5); margin-bottom: 16px;">
-            <div class="cat-title" style="color: #ffd700; font-size: 14px; font-weight: bold; margin-bottom: 8px;">🎶 BẬT NHẠC NỀN & GIỌNG ĐỌC CẢM ƠN TIẾNG VIỆT:</div>
-            <div id="bgm-status-text" style="font-size: 13px; color: #a7f3d0; margin-bottom: 10px; font-weight: bold;">Trạng thái nhạc: ⏹️ Sẵn sàng phát</div>
+            <div class="cat-title" style="color: #ffd700; font-size: 14px; font-weight: bold; margin-bottom: 8px;">🎶 ÂM THANH TRÊN OBS:</div>
+            <div id="bgm-status-text" style="font-size: 13px; color: #a7f3d0; margin-bottom: 6px; font-weight: bold;">Nhạc nền: đang kết nối...</div>
+            <div id="overlay-audio-status" style="font-size: 12px; color: #fed7aa; margin-bottom: 10px;">Nếu không nghe tiếng, mở Interact của nguồn Browser trong OBS và nhấp một lần vào hình.</div>
             <div class="sim-buttons" style="margin-bottom: 10px; gap: 8px; display: flex; flex-wrap: wrap;">
               <button id="btn-bgm-chant" class="btn btn-gold" style="font-weight: bold;">📿 Bật Nhạc Niệm Phật (Nam Mô A Di Đà Phật)</button>
-              <button id="btn-bgm-zen" class="btn btn-secondary">🌿 Nhạc Thiền Sáo Trúc</button>
+              <button id="btn-bgm-zen" class="btn btn-secondary">🌿 Nhạc Tịnh Tâm Mới</button>
               <button id="btn-bgm-stop" class="btn btn-dark">🔇 Tắt Nhạc</button>
+            </div>
+            <div class="audio-levels" style="display: grid; gap: 8px; margin: 12px 0;">
+              <label style="display: grid; gap: 4px; font-size: 12px; color: #fed7aa;">Nhạc nền <span id="music-volume-value">32%</span><input id="music-volume" type="range" min="0" max="100" value="32"></label>
+              <label style="display: grid; gap: 4px; font-size: 12px; color: #fed7aa;">Chuông và mõ <span id="effects-volume-value">80%</span><input id="effects-volume" type="range" min="0" max="100" value="80"></label>
+              <label style="display: grid; gap: 4px; font-size: 12px; color: #fed7aa;">Giọng cảm ơn <span id="voice-volume-value">80%</span><input id="voice-volume" type="range" min="0" max="100" value="80"></label>
             </div>
             
             <!-- Trình phát nhạc trực tiếp có nút Play/Pause rõ ràng -->
             <div style="margin-bottom: 12px;">
-              <label style="font-size: 12px; color: #fed7aa; display: block; margin-bottom: 4px;">Trình phát trực tiếp trên tab Admin:</label>
-              <audio id="admin-bgm-player" controls loop preload="auto" src="/assets/nam_mo_a_di_da_phat.mp3" style="width: 100%; height: 38px; border-radius: 8px; outline: none;"></audio>
+              <label style="font-size: 12px; color: #fed7aa; display: block; margin-bottom: 4px;">Nghe thử trên tab Admin (không điều khiển OBS):</label>
+              <audio id="admin-bgm-player" controls loop preload="none" src="/assets/tinh_tam_ambient.mp3" style="width: 100%; height: 38px; border-radius: 8px; outline: none;"></audio>
             </div>
 
-            <div class="sim-buttons" style="margin-top: 8px;">
-              <button id="btn-test-tts" class="btn btn-primary" style="background: #10b981; border-color: #059669; font-weight: bold; width: 100%;">🗣️ Bấm Nghe Thử: Giọng Đọc Cảm Ơn Tiếng Việt Chuẩn</button>
+            <div class="sim-buttons" style="margin-top: 8px; gap: 8px; display: flex; flex-wrap: wrap;">
+              <button id="btn-test-comment" class="btn btn-secondary">🪵 Thử tiếng bình luận trên OBS</button>
+              <button id="btn-test-seat" class="btn btn-secondary">🔔 Thử chuông người vào ngồi</button>
+              <button id="btn-test-tts" class="btn btn-primary" style="background: #10b981; border-color: #059669; font-weight: bold;">🗣️ Thử giọng cảm ơn trên OBS</button>
             </div>
+            <label style="display: block; font-size: 12px; color: #fed7aa; margin-top: 8px;">Nghe thử tiếng mõ bình luận:</label>
+            <audio controls preload="none" src="/assets/comment_chime.mp3" aria-label="Nghe thử tiếng mõ bình luận trên tab Admin" style="width: 100%; height: 34px;"></audio>
+            <label style="display: block; font-size: 12px; color: #fed7aa; margin-top: 8px;">Nghe thử chuông người vào ngồi:</label>
+            <audio controls preload="none" src="/assets/seat_bell.mp3" aria-label="Nghe thử chuông người vào ngồi trên tab Admin" style="width: 100%; height: 34px;"></audio>
           </div>
 
           <div class="sim-category">
@@ -182,7 +194,7 @@
               <li>Dán đường link bên dưới vào ô <strong>URL</strong>:</li>
             </ol>
             <div class="copy-url-box">
-              <input type="text" id="obs-url-input" value="http://localhost:3000/?layout=vertical" readonly>
+              <input type="text" id="obs-url-input" value="http://localhost:3000/obs" readonly>
               <button id="btn-copy-url" class="btn btn-sm btn-primary">📋 Sao Chép</button>
             </div>
             <div class="obs-specs">
@@ -204,6 +216,6 @@
     </div>
   </div>
 
-  <script src="/js/admin.js?v=20261103_4"></script>
+  <script src="/js/admin.js?v=20261103_7"></script>
 </body>
 </html>

@@ -4,7 +4,6 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const { spawn } = require('child_process');
-const { TikTokLiveConnection } = require('tiktok-live-connector');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +15,15 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const BUILD_VERSION = '2026-11-03-obs-audio-3';
+
+app.get('/obs', (req, res) => res.redirect('/?layout=vertical&stream=1'));
+app.get('/obs-horizontal', (req, res) => res.redirect('/?layout=horizontal&stream=1'));
+app.get('/api/version', (req, res) => res.json({
+  version: BUILD_VERSION,
+  obsUrl: `http://localhost:${PORT}/obs`,
+  adminUrl: `http://localhost:${PORT}/admin.html`
+}));
 
 app.use(cors());
 app.use(express.json());
@@ -67,6 +75,9 @@ const state = {
   isConnected: false,
   isConnecting: false,
   layout: 'vertical', // 'vertical' (9:16) or 'horizontal' (16:9)
+  bgm: { playing: true, track: '/assets/tinh_tam_ambient.mp3' },
+  audioSettings: { musicVolume: 0.32, effectsVolume: 0.8, voiceVolume: 0.8 },
+  audioStatus: null,
   stats: {
     totalLikes: 0,
     totalGifts: 0,
@@ -106,44 +117,6 @@ function initSeats(count) {
     });
   }
 
-  // Pre-seed aesthetic meditators so temple looks lively & radiant
-  const demoMeditators = [
-    { uniqueId: 'zen_tue_tam', nickname: 'Tuệ Tâm', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=TueTam', tier: 'vip', diamonds: 99 },
-    { uniqueId: 'zen_minh_an', nickname: 'Minh An', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=MinhAn', tier: 'vip', diamonds: 66 },
-    { uniqueId: 'zen_dieu_thien', nickname: 'Diệu Thiện', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=DieuThien', tier: 'advanced', diamonds: 20 },
-    { uniqueId: 'zen_phuc_duc', nickname: 'Phúc Đức', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=PhucDuc', tier: 'advanced', diamonds: 10 },
-    { uniqueId: 'zen_an_lac', nickname: 'An Lạc', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=AnLac', tier: 'standard', diamonds: 0 },
-    { uniqueId: 'zen_thien_dinh', nickname: 'Thiền Định', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=ThienDinh', tier: 'standard', diamonds: 0 }
-  ];
-
-  demoMeditators.forEach((demo, idx) => {
-    let targetIdx = idx;
-    if (demo.tier === 'vip') targetIdx = idx;
-    else if (demo.tier === 'advanced') targetIdx = 6 + (idx - 2);
-    else targetIdx = 12 + (idx - 4);
-
-    if (state.seats[targetIdx]) {
-      state.seats[targetIdx].user = {
-        uniqueId: demo.uniqueId,
-        nickname: demo.nickname,
-        avatarUrl: demo.avatarUrl,
-        seatedAt: Date.now(),
-        lastActive: Date.now(),
-        diamondSpent: demo.diamonds,
-        commentsCount: 1,
-        isDemo: true
-      };
-    }
-  });
-
-  state.topDonators = [
-    { uniqueId: 'zen_tue_tam', nickname: 'Tuệ Tâm', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=TueTam', totalDiamonds: 99 },
-    { uniqueId: 'zen_minh_an', nickname: 'Minh An', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=MinhAn', totalDiamonds: 66 },
-    { uniqueId: 'zen_dieu_thien', nickname: 'Diệu Thiện', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=DieuThien', totalDiamonds: 20 }
-  ];
-
-  state.stats.gongCount = 108;
-  state.stats.totalLikes = 2500;
 }
 
 initSeats(state.settings.totalSeats);
@@ -155,6 +128,9 @@ function broadcastState() {
     isConnecting: state.isConnecting,
     tiktokUsername: state.tiktokUsername,
     layout: state.layout,
+    bgm: state.bgm,
+    audioSettings: state.audioSettings,
+    audioStatus: state.audioStatus,
     stats: state.stats,
     settings: state.settings,
     seats: state.seats,
@@ -187,6 +163,7 @@ function assignSeatForUser(userData, priorityTier = 'standard') {
     currentSeat.user.nickname = userData.nickname || currentSeat.user.nickname;
     currentSeat.user.avatarUrl = userData.avatarUrl || currentSeat.user.avatarUrl;
     currentSeat.user.lastActive = Date.now();
+    currentSeat.user.diamondSpent = (currentSeat.user.diamondSpent || 0) + (userData.diamondSpent || 0);
     currentSeat.user.commentsCount = (currentSeat.user.commentsCount || 0) + 1;
 
     // Check if eligible for tier promotion (e.g. VIP)
@@ -272,7 +249,7 @@ function assignSeatForUser(userData, priorityTier = 'standard') {
     const existing = state.seats[candidateIdx].user;
     const isIdle = (now - existing.lastActive) > (state.settings.idleTimeoutSeconds * 1000);
 
-    if (newUser.diamondSpent > (existing.diamondSpent || 0) || isIdle || newUser.diamondSpent > 0) {
+    if (newUser.diamondSpent > (existing.diamondSpent || 0) || isIdle) {
       const kickedUser = existing;
       state.seats[candidateIdx].user = newUser;
 
@@ -315,7 +292,6 @@ function updateTopDonators(uniqueId, nickname, avatarUrl, diamonds) {
 // ==========================================
 // TIKTOK LIVE CONNECTION MANAGER (DUAL ENGINE: PYTHON BRIDGE + NODE CONNECTOR)
 // ==========================================
-let tiktokLive = null;
 let pythonBridgeProcess = null;
 
 // Webhook Endpoints from Python Bridge
@@ -434,30 +410,38 @@ app.post('/api/webhook/error', (req, res) => {
 function connectTikTok(username) {
   if (!username) return;
   username = username.replace(/^@/, '').trim();
+  disconnectTikTok();
   state.tiktokUsername = username;
   state.isConnecting = true;
   state.isConnected = false;
   broadcastState();
 
-  disconnectTikTok();
-
   // Khởi động Python Bridge kết nối TikTok Live (Bypass EulerStream 100%)
   try {
     const bridgePath = path.join(__dirname, 'bridge.py');
     console.log(`[TikTok Bridge] Spawning Python client for @${username}...`);
-    pythonBridgeProcess = spawn('python', [bridgePath, username]);
+    const bridgeProcess = spawn('python', [bridgePath, username], {
+      env: { ...process.env, ZEN_LIVE_PORT: String(PORT) }
+    });
+    pythonBridgeProcess = bridgeProcess;
 
-    pythonBridgeProcess.stdout.on('data', data => {
+    bridgeProcess.stdout.on('data', data => {
       console.log(`[Bridge Out]: ${data.toString().trim()}`);
     });
 
-    pythonBridgeProcess.stderr.on('data', data => {
+    bridgeProcess.stderr.on('data', data => {
       console.error(`[Bridge Err]: ${data.toString().trim()}`);
     });
 
-    pythonBridgeProcess.on('close', code => {
+    bridgeProcess.on('error', err => {
+      if (pythonBridgeProcess !== bridgeProcess) return;
+      broadcastEvent('system:error', { message: `Không mở được Python: ${err.message}` });
+    });
+
+    bridgeProcess.on('close', code => {
       console.log(`[Bridge Closed] Process exited with code ${code}`);
-      if (state.isConnecting) {
+      if (pythonBridgeProcess === bridgeProcess) {
+        pythonBridgeProcess = null;
         state.isConnecting = false;
         state.isConnected = false;
         broadcastEvent('system:error', { message: `Tiến trình kết nối với @${username} đã dừng.` });
@@ -479,22 +463,6 @@ function disconnectTikTok() {
       pythonBridgeProcess = null;
     } catch (e) {}
   }
-  if (tiktokLive) {
-    try { tiktokLive.disconnect(); } catch (e) {}
-    tiktokLive = null;
-  }
-  state.isConnected = false;
-  state.isConnecting = false;
-  broadcastState();
-}
-
-function disconnectTikTok() {
-  if (tiktokLive) {
-    try {
-      tiktokLive.disconnect();
-    } catch (e) {}
-    tiktokLive = null;
-  }
   state.isConnected = false;
   state.isConnecting = false;
   broadcastState();
@@ -510,6 +478,9 @@ io.on('connection', socket => {
     isConnecting: state.isConnecting,
     tiktokUsername: state.tiktokUsername,
     layout: state.layout,
+    bgm: state.bgm,
+    audioSettings: state.audioSettings,
+    audioStatus: state.audioStatus,
     stats: state.stats,
     settings: state.settings,
     seats: state.seats,
@@ -566,7 +537,33 @@ io.on('connection', socket => {
 
   // Admin Background Music & TTS Control
   socket.on('admin:bgm', data => {
-    io.emit('audio:bgm', data);
+    if (data?.action === 'stop') {
+      state.bgm.playing = false;
+    } else if (data?.action === 'play') {
+      const allowedTracks = new Set([
+        '/assets/tinh_tam_ambient.mp3',
+        '/assets/nam_mo_a_di_da_phat.mp3'
+      ]);
+      state.bgm.track = allowedTracks.has(data.track) ? data.track : '/assets/tinh_tam_ambient.mp3';
+      state.bgm.playing = true;
+    } else return;
+    broadcastState();
+  });
+
+  socket.on('admin:test_comment_sound', () => io.emit('audio:comment_test'));
+  socket.on('admin:test_seat_sound', () => io.emit('audio:seat_test'));
+  socket.on('admin:audio_settings', settings => {
+    for (const key of ['musicVolume', 'effectsVolume', 'voiceVolume']) {
+      const value = Number(settings?.[key]);
+      if (Number.isFinite(value)) state.audioSettings[key] = Math.max(0, Math.min(1, value));
+    }
+    broadcastState();
+  });
+  socket.on('overlay:audio_status', status => {
+    if (['music', 'comment', 'seat'].includes(status?.kind) && ['playing', 'blocked', 'stopped'].includes(status?.status)) {
+      state.audioStatus = status;
+      io.emit('audio:status', status);
+    }
   });
 
   socket.on('admin:test_tts', data => {
@@ -692,6 +689,7 @@ server.listen(PORT, () => {
   console.log(`   http://localhost:${PORT}`);
   console.log(`   http://localhost:${PORT}/?layout=vertical   (Khung Dọc 9:16)`);
   console.log(`   http://localhost:${PORT}/?layout=horizontal (Khung Ngang 16:9)`);
+  console.log(`   http://localhost:${PORT}/obs (dan vao Browser Source OBS)`);
   console.log(`----------------------------------------------------`);
   console.log(`🎛️ Bảng Điều Khiển Admin & Giả Lập Test:`);
   console.log(`   http://localhost:${PORT}/admin.html`);

@@ -31,12 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnBgmZen = document.getElementById('btn-bgm-zen');
   const btnBgmStop = document.getElementById('btn-bgm-stop');
   const btnTestTts = document.getElementById('btn-test-tts');
+  const btnTestComment = document.getElementById('btn-test-comment');
+  const btnTestSeat = document.getElementById('btn-test-seat');
 
   const btnLayoutVert = document.getElementById('btn-layout-vert');
   const btnLayoutHoriz = document.getElementById('btn-layout-horiz');
   const obsUrlInput = document.getElementById('obs-url-input');
   const btnCopyUrl = document.getElementById('btn-copy-url');
   const eventFeed = document.getElementById('event-feed');
+  const overlayUrl = layout => `${window.location.origin}/${layout === 'horizontal' ? 'obs-horizontal' : 'obs'}`;
 
   // Copy OBS URL
   btnCopyUrl.addEventListener('click', () => {
@@ -68,14 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
   btnLayoutVert.addEventListener('click', () => {
     btnLayoutVert.classList.add('active');
     btnLayoutHoriz.classList.remove('active');
-    obsUrlInput.value = 'http://localhost:3000/?layout=vertical';
+    obsUrlInput.value = overlayUrl('vertical');
     socket.emit('admin:toggle_layout', { layout: 'vertical' });
   });
 
   btnLayoutHoriz.addEventListener('click', () => {
     btnLayoutHoriz.classList.add('active');
     btnLayoutVert.classList.remove('active');
-    obsUrlInput.value = 'http://localhost:3000/?layout=horizontal';
+    obsUrlInput.value = overlayUrl('horizontal');
     socket.emit('admin:toggle_layout', { layout: 'horizontal' });
   });
 
@@ -106,81 +109,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const adminBgmPlayer = document.getElementById('admin-bgm-player');
   const bgmStatusText = document.getElementById('bgm-status-text');
-  const adminBgmVol = document.getElementById('admin-bgm-vol');
-  const adminVolLabel = document.getElementById('admin-vol-label');
-
-  if (adminBgmVol && adminBgmPlayer) {
-    adminBgmVol.addEventListener('input', () => {
-      adminBgmPlayer.volume = parseFloat(adminBgmVol.value);
-      if (adminVolLabel) adminVolLabel.textContent = Math.round(adminBgmVol.value * 100) + '%';
+  const overlayAudioStatus = document.getElementById('overlay-audio-status');
+  for (const [id, key] of [
+    ['music-volume', 'musicVolume'],
+    ['effects-volume', 'effectsVolume'],
+    ['voice-volume', 'voiceVolume']
+  ]) {
+    const slider = document.getElementById(id);
+    const label = document.getElementById(`${id}-value`);
+    slider.addEventListener('input', () => {
+      label.textContent = `${slider.value}%`;
+      socket.emit('admin:audio_settings', { [key]: Number(slider.value) / 100 });
     });
-  }
-
-  function playAdminVoice(voiceFile) {
-    try {
-      const audio = new Audio(voiceFile);
-      audio.volume = 0.95;
-      audio.play().catch(e => console.log('Audio play error:', e));
-    } catch(err) {}
   }
 
   btnGiftRose.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Hoa Hồng', diamonds: 1, count: 1 } });
-    playAdminVoice('/audio_tts/blessing_rose.mp3');
   });
 
   btnGiftBell.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Chuông Bát', diamonds: 20, count: 1 } });
-    playAdminVoice('/audio_tts/blessing_general.mp3');
   });
 
   btnGiftIncense.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Nụ Trầm VIP', diamonds: 99, count: 1 } });
-    playAdminVoice('/audio_tts/blessing_lion.mp3');
   });
 
   btnGiftUniverse.addEventListener('click', () => {
     socket.emit('sim:gift', { gift: { name: 'Vũ Trụ Cực Lạc', diamonds: 5000, count: 1 } });
-    playAdminVoice('/audio_tts/blessing_universe.mp3');
   });
 
-  // Background Music & TTS Handlers (Phát ngay trên trang Admin để nghe trực tiếp)
+  // Background music controls the OBS overlay. The player above is preview only.
   if (btnBgmChant) {
     btnBgmChant.addEventListener('click', () => {
-      if (adminBgmPlayer) {
-        adminBgmPlayer.src = '/assets/nam_mo_a_di_da_phat.mp3';
-        adminBgmPlayer.play().catch(e => console.log('Play err:', e));
-      }
-      if (bgmStatusText) bgmStatusText.textContent = 'Trạng thái nhạc: 🎶 Đang phát Nam Mô A Di Đà Phật (Tiếng Việt)';
+      if (adminBgmPlayer) adminBgmPlayer.src = '/assets/nam_mo_a_di_da_phat.mp3';
       socket.emit('admin:bgm', { action: 'play', track: '/assets/nam_mo_a_di_da_phat.mp3' });
     });
   }
 
   if (btnBgmZen) {
     btnBgmZen.addEventListener('click', () => {
-      if (adminBgmPlayer) {
-        adminBgmPlayer.src = '/assets/zen_meditation.mp3';
-        adminBgmPlayer.play().catch(e => console.log('Play err:', e));
-      }
-      if (bgmStatusText) bgmStatusText.textContent = 'Trạng thái nhạc: 🌿 Đang phát Nhạc Thiền Sáo Trúc';
-      socket.emit('admin:bgm', { action: 'play', track: '/assets/zen_meditation.mp3' });
+      if (adminBgmPlayer) adminBgmPlayer.src = '/assets/tinh_tam_ambient.mp3';
+      socket.emit('admin:bgm', { action: 'play', track: '/assets/tinh_tam_ambient.mp3' });
     });
   }
 
   if (btnBgmStop) {
     btnBgmStop.addEventListener('click', () => {
-      if (adminBgmPlayer) adminBgmPlayer.pause();
-      if (bgmStatusText) bgmStatusText.textContent = 'Trạng thái nhạc: ⏹️ Đang tắt';
       socket.emit('admin:bgm', { action: 'stop' });
     });
   }
 
   if (btnTestTts) {
     btnTestTts.addEventListener('click', () => {
-      playAdminVoice('/audio_tts/blessing_general.mp3');
       socket.emit('admin:test_tts', { preset: 'blessing_general.mp3' });
     });
   }
+  btnTestComment.addEventListener('click', () => socket.emit('admin:test_comment_sound'));
+  btnTestSeat.addEventListener('click', () => socket.emit('admin:test_seat_sound'));
+
+  function updateAudioStatus(status) {
+    if (!status || !overlayAudioStatus) return;
+    if (status.status === 'blocked') {
+      overlayAudioStatus.textContent = '⚠️ Nguồn Browser bị chặn phát âm. Trong OBS: chuột phải nguồn → Interact → nhấp một lần vào hình.';
+      overlayAudioStatus.style.color = '#fca5a5';
+    } else if (status.kind === 'comment' && status.status === 'playing') {
+      overlayAudioStatus.textContent = '🪵 Đã phát tiếng mõ bình luận trên overlay. Kiểm tra thanh âm lượng Browser trong OBS.';
+      overlayAudioStatus.style.color = '#a7f3d0';
+    } else if (status.kind === 'seat' && status.status === 'playing') {
+      overlayAudioStatus.textContent = '🔔 Đã phát chuông người vào ngồi trên overlay.';
+      overlayAudioStatus.style.color = '#a7f3d0';
+    } else if (status.kind === 'music' && status.status === 'playing') {
+      overlayAudioStatus.textContent = '🎶 Overlay đã phát nhạc. Kiểm tra thanh âm lượng của nguồn Browser trong OBS.';
+      overlayAudioStatus.style.color = '#a7f3d0';
+    }
+  }
+  socket.on('audio:status', updateAudioStatus);
 
   // ==========================================
   // SOCKET STATE UPDATES
@@ -215,16 +219,33 @@ document.addEventListener('DOMContentLoaded', () => {
     statLikes.textContent = state.stats.totalLikes || 0;
     statGong.textContent = state.stats.gongCount || 0;
     statDiamonds.textContent = state.stats.totalDiamonds || 0;
+    if (state.bgm && bgmStatusText) {
+      const trackName = state.bgm.track.includes('nam_mo') ? 'Niệm Phật' : 'Tịnh Tâm';
+      bgmStatusText.textContent = state.bgm.playing ? `Nhạc nền: đang bật ${trackName} trên overlay` : 'Nhạc nền: đang tắt';
+    }
+    if (state.audioSettings) {
+      for (const [id, key] of [
+        ['music-volume', 'musicVolume'],
+        ['effects-volume', 'effectsVolume'],
+        ['voice-volume', 'voiceVolume']
+      ]) {
+        const percent = Math.round((state.audioSettings[key] ?? 0) * 100);
+        document.getElementById(id).value = percent;
+        document.getElementById(`${id}-value`).textContent = `${percent}%`;
+      }
+      if (adminBgmPlayer) adminBgmPlayer.volume = state.audioSettings.musicVolume;
+    }
+    updateAudioStatus(state.audioStatus);
 
     // Layout
     if (state.layout === 'horizontal') {
       btnLayoutHoriz.classList.add('active');
       btnLayoutVert.classList.remove('active');
-      obsUrlInput.value = 'http://localhost:3000/?layout=horizontal';
+      obsUrlInput.value = overlayUrl('horizontal');
     } else {
       btnLayoutVert.classList.add('active');
       btnLayoutHoriz.classList.remove('active');
-      obsUrlInput.value = 'http://localhost:3000/?layout=vertical';
+      obsUrlInput.value = overlayUrl('vertical');
     }
   }
 

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,800;1,700&family=Quicksand:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=20261103_4">
+  <link rel="stylesheet" href="/css/style.css?v=20261103_5">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="vertical">
@@ -36,8 +36,8 @@
         <span class="emblem-symbol">☸</span>
       </div>
       <div class="temple-title-box">
-        <h1 class="temple-title">ĐẠI CHÁNH ĐIỆN VẠN PHẬT</h1>
-        <div class="temple-subtitle">TỊNH TÂM TỌA THIỀN • CÔNG ĐỨC VÔ LƯỢNG • PHƯỚC ĐỨC VÔ BIÊN</div>
+        <h1 class="temple-title">Tịnh tâm thiền đường</h1>
+        <div class="temple-subtitle">Cùng ngồi yên một chút, thở chậm một chút</div>
       </div>
 
       <!-- Live Counters Badges -->
@@ -63,11 +63,11 @@
       <div class="honor-board">
         <div class="honor-header">
           <span class="dragon-dec">𑁍</span>
-          <span class="honor-title-text">BẢNG VÀNG ĐẠI CÔNG ĐỨC</span>
+          <span class="honor-title-text">Lời tri ân</span>
           <span class="dragon-dec">𑁍</span>
         </div>
         <div class="honor-podium" id="honor-podium">
-          <div class="honor-empty">Chờ thiện nam tín nữ phát tâm cúng dường...</div>
+          <div class="honor-empty">Chúc bạn một buổi thiền an yên</div>
         </div>
       </div>
     </header>
@@ -222,6 +222,14 @@
 
     <!-- 4. Main 2.5D Meditation Hall (Thiền Đường Bồ Đoàn Đài Sen 3D) -->
     <main class="meditation-hall">
+      <div class="hall-intro">
+        <span class="hall-intro-mark">🪷</span>
+        <span>Bình luận hoặc vào phòng để chọn một chỗ ngồi</span>
+      </div>
+      <div class="arrival-toast hidden" id="arrival-toast" aria-live="polite">
+        <span class="arrival-lotus">✦</span>
+        <span id="arrival-text"></span>
+      </div>
       <div class="seats-container" id="seats-grid">
         <!-- Rendered dynamically by JavaScript (24 3D Lotus Thrones) -->
       </div>
@@ -231,8 +239,8 @@
     <footer class="temple-footer">
       <div class="guide-marquee">
         <div class="marquee-track">
-          <span>🌸 <strong>PHÁP MÔN TỊNH TÂM:</strong> Bình luận để nhập đàn tọa thiền • Thả tim để phụng thỉnh mõ ngân • Cúng dường Hoa Hồng / Xu để đăng tòa Sen Vàng phát quang! 🌸</span>
-          <span>✨ Nguyện đem công đức này • Hướng về khắp tất cả • Đệ tử và chúng sinh • Đều trọn thành Phật đạo! ✨</span>
+          <span>🪷 Vào phòng hoặc bình luận để ngồi thiền cùng mọi người • Thả tim để ngân tiếng mõ • Chúc bạn bình an 🪷</span>
+          <span>Hít vào thật nhẹ • Thở ra thật chậm • Trở về với phút giây này</span>
         </div>
       </div>
     </footer>
@@ -272,9 +280,9 @@
     </div>
 
     <!-- 9. BACKGROUND MUSIC AUDIO PLAYER (Nhạc Niệm Phật Tiếng Việt) -->
-    <audio id="bgm-player" loop preload="auto" src="/assets/nam_mo_a_di_da_phat.mp3"></audio>
+    <audio id="bgm-player" loop preload="auto" src="/assets/tinh_tam_ambient.mp3"></audio>
   </div>
 
-  <script src="/js/app.js?v=20261103_4"></script>
+  <script src="/js/app.js?v=20261103_7"></script>
 </body>
 </html>

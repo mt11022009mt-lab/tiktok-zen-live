@@ -13,13 +13,38 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
   } catch(e) {}
 }
 
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+})[char]);
+const safeImageUrl = value => {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? escapeHtml(url.href) : '';
+  } catch (_) { return ''; }
+};
+
 // 1. WEB AUDIO API SYNTHESIZER (Chuông Chùa, Mõ Gỗ, Nhạc Thiền 432Hz)
 class TempleAudioEngine {
   constructor() {
     this.ctx = null;
     this.soundEnabled = true;
     this.musicEnabled = false;
-    this.ambientNodes = null;
+    this.musicVolume = 0.32;
+    this.effectsVolume = 0.8;
+    this.voiceActive = false;
+    this.bgmPlayer = document.getElementById('bgm-player');
+    this.bgmPlayer.volume = this.musicVolume;
+    this.commentAudio = new Audio('/assets/comment_chime.mp3');
+    this.commentAudio.preload = 'auto';
+    this.commentAudio.volume = this.effectsVolume * 0.9;
+    this.seatAudio = new Audio('/assets/seat_bell.mp3');
+    this.seatAudio.preload = 'auto';
+    this.seatAudio.volume = this.effectsVolume * 0.8;
+    this.lastCommentAt = 0;
+    this.lastSeatAt = 0;
+    this.lastLikeAt = 0;
+    this.duckTimer = null;
+    this.onStatus = null;
   }
 
   init() {
@@ -39,7 +64,7 @@ class TempleAudioEngine {
 
     const now = this.ctx.currentTime;
     const masterGain = this.ctx.createGain();
-    masterGain.gain.setValueAtTime(0.85, now);
+    masterGain.gain.setValueAtTime(0.48 * this.effectsVolume, now);
     masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 8.0);
     masterGain.connect(this.ctx.destination);
 
@@ -75,6 +100,9 @@ class TempleAudioEngine {
   // Tiếng Mõ Gỗ Chân Thực (Acoustic Wooden Fish Knock)
   playWoodenFish() {
     if (!this.soundEnabled) return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastLikeAt < 2500) return;
+    this.lastLikeAt = nowMs;
     this.init();
 
     const now = this.ctx.currentTime;
@@ -90,7 +118,7 @@ class TempleAudioEngine {
     filter.frequency.setValueAtTime(650, now);
     filter.Q.setValueAtTime(4.5, now);
 
-    gain.gain.setValueAtTime(0.75, now);
+    gain.gain.setValueAtTime(0.48 * this.effectsVolume, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
 
     osc.connect(filter);
@@ -101,113 +129,103 @@ class TempleAudioEngine {
     osc.stop(now + 0.15);
   }
 
-  // Tiếng Thỉnh Khánh / Chuông Bát Nhỏ (Hand Singing Bowl)
+  // A short wooden tap for ordinary comments; visual updates still happen for every comment.
   playChime() {
     if (!this.soundEnabled) return;
-    this.init();
-
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, now);
-    osc.frequency.exponentialRampToValueAtTime(875, now + 2.5);
-
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
-
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 2.5);
+    const now = Date.now();
+    if (now - this.lastCommentAt < 1800) return;
+    this.lastCommentAt = now;
+    this.duckMusic(700);
+    this.commentAudio.pause();
+    this.commentAudio.currentTime = 0;
+    this.commentAudio.play().then(() => this.reportAudio('comment', 'playing'))
+      .catch(() => this.reportAudio('comment', 'blocked'));
   }
 
-  // Nhạc Thiền 432Hz Nền Tự Động (Generative Zen Drone)
+  playSeatBell() {
+    if (!this.soundEnabled) return;
+    const now = Date.now();
+    if (now - this.lastSeatAt < 3800) return;
+    this.lastSeatAt = now;
+    this.lastCommentAt = now;
+    this.duckMusic(3000);
+    this.seatAudio.pause();
+    this.seatAudio.currentTime = 0;
+    this.seatAudio.play().then(() => this.reportAudio('seat', 'playing'))
+      .catch(() => this.reportAudio('seat', 'blocked'));
+  }
+
+  setLevels(settings) {
+    if (!settings) return;
+    this.musicVolume = Math.max(0, Math.min(1, Number(settings.musicVolume) || 0));
+    this.effectsVolume = Math.max(0, Math.min(1, Number(settings.effectsVolume) || 0));
+    this.commentAudio.volume = this.effectsVolume * 0.9;
+    this.seatAudio.volume = this.effectsVolume * 0.8;
+    this.bgmPlayer.volume = (this.voiceActive || this.duckTimer) ? this.musicVolume * 0.28 : this.musicVolume;
+  }
+
+  setVoiceActive(active) {
+    this.voiceActive = active;
+    this.bgmPlayer.volume = (active || this.duckTimer) ? this.musicVolume * 0.28 : this.musicVolume;
+  }
+
+  reportAudio(kind, status) {
+    if (this.onStatus) this.onStatus({ kind, status });
+  }
+
+  duckMusic(duration) {
+    if (!this.musicEnabled) return;
+    this.bgmPlayer.volume = this.musicVolume * 0.28;
+    clearTimeout(this.duckTimer);
+    this.duckTimer = setTimeout(() => {
+      this.duckTimer = null;
+      if (!this.voiceActive) this.bgmPlayer.volume = this.musicVolume;
+    }, duration);
+  }
+
   toggleAmbientMusic() {
-    this.init();
-    if (this.ambientNodes) {
+    if (this.musicEnabled) {
       this.stopAmbientMusic();
       return false;
-    } else {
-      this.startAmbientMusic();
-      return true;
     }
-  }
-
-  startAmbientMusic() {
-    if (this.ambientNodes) return;
-    this.init();
-
-    const now = this.ctx.currentTime;
-    const master = this.ctx.createGain();
-    master.gain.setValueAtTime(0.001, now);
-    master.gain.linearRampToValueAtTime(0.12, now + 3);
-    master.connect(this.ctx.destination);
-
-    const freqs = [108, 216, 324, 432, 648];
-    const oscs = [];
-
-    freqs.forEach(f => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const panner = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(f, now);
-      gain.gain.setValueAtTime(0.15 / freqs.length, now);
-
-      if (panner) {
-        panner.pan.setValueAtTime((Math.random() - 0.5) * 0.8, now);
-        osc.connect(gain);
-        gain.connect(panner);
-        panner.connect(master);
-      } else {
-        osc.connect(gain);
-        gain.connect(master);
-      }
-
-      osc.start(now);
-      oscs.push(osc);
-    });
-
-    this.ambientNodes = { master, oscs };
-  }
-
-  // Toggle Background Music Player (Nhạc Niệm Phật & Nhạc Thiền Tiếng Việt)
-  toggleAmbientMusic() {
-    const player = document.getElementById('bgm-player');
-    if (!player) return false;
-
-    if (this.musicEnabled) {
-      player.pause();
-      this.musicEnabled = false;
-      return false;
-    } else {
-      player.volume = 0.45;
-      player.play().catch(e => {
-        console.log('[BGM] Autoplay blocked, waiting for click:', e);
-      });
-      this.musicEnabled = true;
-      return true;
-    }
+    this.startAmbientMusic();
+    return true;
   }
 
   setBgmTrack(trackPath) {
-    const player = document.getElementById('bgm-player');
-    if (!player) return;
-    const wasPlaying = this.musicEnabled;
-    player.src = trackPath;
-    if (wasPlaying) {
-      player.play().catch(e => console.log('[BGM] Error:', e));
+    if (this.bgmPlayer.getAttribute('src') !== trackPath) this.bgmPlayer.src = trackPath;
+  }
+
+  startAmbientMusic() {
+    this.bgmPlayer.volume = (this.voiceActive || this.duckTimer) ? this.musicVolume * 0.28 : this.musicVolume;
+    this.bgmPlayer.play().then(() => {
+      this.musicEnabled = true;
+      this.reportAudio('music', 'playing');
+    }).catch(() => {
+      this.musicEnabled = false;
+      this.reportAudio('music', 'blocked');
+    });
+  }
+
+  primeMedia() {
+    this.init();
+    for (const audio of [this.commentAudio, this.seatAudio]) {
+      const originalVolume = audio.volume;
+      audio.volume = 0;
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = originalVolume;
+      }).catch(() => { audio.volume = originalVolume; });
     }
   }
 
   stopAmbientMusic() {
-    const player = document.getElementById('bgm-player');
-    if (player) player.pause();
+    clearTimeout(this.duckTimer);
+    this.duckTimer = null;
+    this.bgmPlayer.pause();
     this.musicEnabled = false;
+    this.reportAudio('music', 'stopped');
   }
 }
 
@@ -217,6 +235,8 @@ class TempleAnnouncer {
     this.enabled = true;
     this.audioQueue = [];
     this.isPlaying = false;
+    this.volume = 0.8;
+    this.onPlaybackChange = null;
   }
 
   announceGift(nickname, giftName, count) {
@@ -236,15 +256,28 @@ class TempleAnnouncer {
   }
 
   playAudioFile(audioPath) {
-    try {
-      const audio = new Audio(audioPath);
-      audio.volume = 0.95;
-      audio.play().catch(err => {
-        console.log('[TTS] Autoplay restriction:', err);
-      });
-    } catch (e) {
-      console.error('[TTS] Play failed:', e);
-    }
+    if (this.audioQueue.length >= 5) return;
+    this.audioQueue.push(audioPath);
+    this.processQueue();
+  }
+
+  async processQueue() {
+    if (this.isPlaying || this.audioQueue.length === 0) return;
+    this.isPlaying = true;
+    const audio = new Audio(this.audioQueue.shift());
+    audio.volume = this.volume;
+    if (this.onPlaybackChange) this.onPlaybackChange(true);
+    await new Promise(resolve => {
+      const timeout = setTimeout(resolve, 15000);
+      const finish = () => { clearTimeout(timeout); resolve(); };
+      audio.addEventListener('ended', finish, { once: true });
+      audio.addEventListener('error', finish, { once: true });
+      audio.play().catch(finish);
+    });
+    audio.pause();
+    if (this.onPlaybackChange) this.onPlaybackChange(false);
+    this.isPlaying = false;
+    if (this.audioQueue.length) setTimeout(() => this.processQueue(), 200);
   }
 }
 
@@ -254,6 +287,8 @@ class TempleAmbientCanvas {
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext('2d');
     this.particles = [];
+    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.lastFrame = 0;
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this.initParticles();
@@ -287,7 +322,10 @@ class TempleAmbientCanvas {
     };
   }
 
-  animate() {
+  animate(timestamp = 0) {
+    requestAnimationFrame(time => this.animate(time));
+    if (document.hidden || this.reducedMotion || timestamp - this.lastFrame < 66) return;
+    this.lastFrame = timestamp;
     this.ctx.clearRect(0, 0, this.width, this.height);
 
     for (let i = 0; i < this.particles.length; i++) {
@@ -316,7 +354,6 @@ class TempleAmbientCanvas {
       }
     }
 
-    requestAnimationFrame(() => this.animate());
   }
 }
 
@@ -325,9 +362,20 @@ class TempleApp {
   constructor() {
     this.audio = new TempleAudioEngine();
     this.announcer = new TempleAnnouncer();
+    this.announcer.onPlaybackChange = active => this.audio.setVoiceActive(active);
     this.socket = null;
     this.state = null;
     this.popupTimeout = null;
+    this.arrivalTimeout = null;
+    this.pendingArrivals = new Map();
+    this.seatSignature = '';
+    this.donorSignature = '';
+    this.lastBgmState = '';
+    this.audio.onStatus = status => {
+      if (document.body.classList.contains('stream-mode')) {
+        this.socket?.emit('overlay:audio_status', status);
+      }
+    };
 
     // Elements
     this.countGong = document.getElementById('count-gong');
@@ -351,6 +399,7 @@ class TempleApp {
     } else {
       document.body.className = 'vertical';
     }
+    document.body.classList.toggle('stream-mode', params.get('stream') === '1');
   }
 
   initUIControls() {
@@ -362,8 +411,10 @@ class TempleApp {
 
     const btnMusic = document.getElementById('btn-toggle-music');
     btnMusic.addEventListener('click', () => {
-      const isPlaying = this.audio.toggleAmbientMusic();
-      btnMusic.textContent = isPlaying ? '🎵' : '🎶 (Tắt)';
+      this.socket.emit('admin:bgm', {
+        action: this.state?.bgm?.playing ? 'stop' : 'play',
+        track: this.state?.bgm?.track || '/assets/tinh_tam_ambient.mp3'
+      });
     });
 
     const btnLayout = document.getElementById('btn-toggle-layout');
@@ -385,7 +436,8 @@ class TempleApp {
     });
 
     const unlockAudio = () => {
-      this.audio.init();
+      this.audio.primeMedia();
+      if (this.state?.bgm?.playing && this.audio.bgmPlayer.paused) this.audio.startAmbientMusic();
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
     };
@@ -402,12 +454,18 @@ class TempleApp {
 
     this.socket.on('state:init', (data) => {
       this.state = data;
+      this.audio.setLevels(data.audioSettings);
+      this.announcer.volume = data.audioSettings?.voiceVolume ?? 0.8;
       this.render();
+      this.syncBgm(data.bgm);
     });
 
     this.socket.on('state:update', (data) => {
       this.state = data;
+      this.audio.setLevels(data.audioSettings);
+      this.announcer.volume = data.audioSettings?.voiceVolume ?? 0.8;
       this.render();
+      this.syncBgm(data.bgm);
     });
 
     this.socket.on('layout:change', ({ layout }) => {
@@ -418,28 +476,56 @@ class TempleApp {
       this.handleStreamEvent(type, data);
     });
 
-    this.socket.on('audio:bgm', ({ action, track }) => {
-      if (action === 'play') {
-        if (track) this.audio.setBgmTrack(track);
-        this.audio.musicEnabled = false;
-        this.audio.toggleAmbientMusic();
-      } else if (action === 'stop') {
-        this.audio.stopAmbientMusic();
-      }
-    });
+    this.socket.on('audio:comment_test', () => this.audio.playChime());
+    this.socket.on('audio:seat_test', () => this.audio.playSeatBell());
 
     this.socket.on('audio:tts_test', ({ preset }) => {
       this.announcer.playAudioFile('/audio_tts/' + (preset || 'blessing_general.mp3'));
     });
   }
 
+  syncBgm(bgm) {
+    if (!bgm) return;
+    const musicButton = document.getElementById('btn-toggle-music');
+    if (musicButton) {
+      musicButton.textContent = bgm.playing ? '🎵' : '🔇';
+      musicButton.title = bgm.playing ? 'Tắt nhạc nền' : 'Bật nhạc nền';
+    }
+    const signature = `${bgm.playing}:${bgm.track}`;
+    if (signature === this.lastBgmState) return;
+    this.lastBgmState = signature;
+    if (bgm.playing) {
+      this.audio.setBgmTrack(bgm.track);
+      this.audio.startAmbientMusic();
+    } else {
+      this.audio.stopAmbientMusic();
+    }
+  }
+
   handleStreamEvent(type, data) {
+    const seatAction = data?.seatResult?.action;
+    const justSeated = ['seated', 'replaced', 'promoted'].includes(seatAction);
+    if (['user:join', 'user:chat', 'user:gift', 'user:like'].includes(type) && data?.seatResult) {
+      const result = data.seatResult;
+      if (['seated', 'replaced', 'promoted'].includes(result.action)) {
+        this.pendingArrivals.set(result.seatIndex, {
+          uniqueId: result.user.uniqueId,
+          nickname: result.user.nickname,
+          action: result.action
+        });
+      }
+    }
     if (type === 'user:like') {
-      this.audio.playWoodenFish();
+      if (justSeated) this.audio.playSeatBell();
+      else this.audio.playWoodenFish();
       this.triggerBowing();
     } else if (type === 'user:chat') {
-      this.audio.playChime();
+      if (justSeated) this.audio.playSeatBell();
+      else this.audio.playChime();
+    } else if (type === 'user:join') {
+      if (justSeated) this.audio.playSeatBell();
     } else if (type === 'user:gift') {
+      this.audio.duckMusic(2800);
       this.audio.playTempleBell();
       this.showGiftPopup(data);
       this.announcer.announceGift(data.user.nickname, data.giftName, data.giftCount);
@@ -458,7 +544,8 @@ class TempleApp {
   }
 
   triggerAuraFlash(uniqueId) {
-    const seatEl = document.querySelector(`[data-uid="${uniqueId}"] .seat-avatar-wrap`);
+    const seatEl = [...this.seatsGrid.querySelectorAll('.seat-item')]
+      .find(item => item.dataset.uid === String(uniqueId))?.querySelector('.seat-avatar-wrap');
     if (seatEl) {
       seatEl.classList.add('aura-burst-anim');
       setTimeout(() => seatEl.classList.remove('aura-burst-anim'), 1400);
@@ -503,14 +590,43 @@ class TempleApp {
     const seatedCount = this.state.seats.filter(s => s.user).length;
     this.countSeated.textContent = `${seatedCount}/${this.state.seats.length}`;
 
-    this.renderHonorPodium();
-    this.renderSeats();
+    const donorSignature = JSON.stringify(this.state.topDonators || []);
+    if (donorSignature !== this.donorSignature) {
+      this.donorSignature = donorSignature;
+      this.renderHonorPodium();
+    }
+    const seatSignature = JSON.stringify(this.state.seats.map(s => [
+      s.index, s.tier, s.user?.uniqueId, s.user?.nickname, s.user?.avatarUrl, s.user?.diamondSpent
+    ]));
+    if (seatSignature !== this.seatSignature) {
+      this.seatSignature = seatSignature;
+      this.renderSeats();
+    }
+    this.playPendingArrivals();
+  }
+
+  playPendingArrivals() {
+    for (const [index, arrival] of this.pendingArrivals) {
+      const seat = [...this.seatsGrid.querySelectorAll('.seat-item')]
+        .find(item => Number(item.dataset.index) === Number(index));
+      if (!seat || seat.dataset.uid !== String(arrival.uniqueId)) continue;
+      seat.classList.add('seat-arriving');
+      setTimeout(() => seat.classList.remove('seat-arriving'), 1500);
+      const toast = document.getElementById('arrival-toast');
+      document.getElementById('arrival-text').textContent = arrival.action === 'promoted'
+        ? `${arrival.nickname} vừa lên đài sen`
+        : `${arrival.nickname} vừa vào ngồi thiền`;
+      toast.classList.remove('hidden');
+      clearTimeout(this.arrivalTimeout);
+      this.arrivalTimeout = setTimeout(() => toast.classList.add('hidden'), 2600);
+      this.pendingArrivals.delete(index);
+    }
   }
 
   renderHonorPodium() {
     const donors = this.state.topDonators || [];
     if (donors.length === 0) {
-      this.honorPodium.innerHTML = `<div class="honor-empty">Chờ thiện nam tín nữ phát tâm cúng dường...</div>`;
+      this.honorPodium.innerHTML = `<div class="honor-empty">Chúc bạn một buổi thiền an yên</div>`;
       return;
     }
 
@@ -521,10 +637,11 @@ class TempleApp {
         <div class="podium-item rank-${idx + 1}">
           <div class="avatar-wrap">
             <span class="crown">${crowns[idx] || '✨'}</span>
-            <img class="avatar" src="${d.avatarUrl}" alt="${d.nickname}" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=${d.uniqueId}'">
+            <span class="avatar-fallback">✦</span>
+            <img class="avatar" src="${safeImageUrl(d.avatarUrl)}" alt="${escapeHtml(d.nickname)}" onerror="this.style.display='none'">
           </div>
           <div class="donor-info">
-            <div class="name">${d.nickname}</div>
+            <div class="name">${escapeHtml(d.nickname)}</div>
             <div class="diamonds">💎 ${d.totalDiamonds}</div>
           </div>
         </div>
@@ -544,14 +661,14 @@ class TempleApp {
     for (let r = 0; r < rowCount; r++) {
       const rowSeats = seats.slice(r * seatsPerRow, (r + 1) * seatsPerRow);
       let tierClass = 'standard';
-      let tierLabel = 'ĐỒNG TU THIỆN TÂM';
+      let tierLabel = 'Bồ đoàn tĩnh tâm';
 
       if (r === 0) {
         tierClass = 'vip';
-        tierLabel = '✨ HÀNG THƯỢNG PHẨM: CỬU PHẨM LIÊN HOA SEN VÀNG ✨';
+        tierLabel = 'Hàng sen vàng';
       } else if (r === 1) {
         tierClass = 'advanced';
-        tierLabel = '🌿 HÀNG TRUNG PHẨM: ĐÀI SEN NGỌC BÍCH TINH TẤN 🌿';
+        tierLabel = 'Hàng sen ngọc';
       }
 
       html += `<div class="row-label ${tierClass}">${tierLabel}</div>`;
@@ -562,18 +679,19 @@ class TempleApp {
         const isEmpty = !u;
 
         html += `
-          <div class="seat-item tier-${seat.tier} ${isEmpty ? 'is-empty' : 'is-occupied'}" data-uid="${u ? u.uniqueId : ''}">
+          <div class="seat-item tier-${seat.tier} ${isEmpty ? 'is-empty' : 'is-occupied'}" data-index="${seat.index}" data-uid="${u ? escapeHtml(u.uniqueId) : ''}">
             <div class="seat-avatar-wrap ${isEmpty ? '' : 'meditating'}">
               ${isEmpty ? `
                 <span class="empty-lotus-icon">🪷</span>
               ` : `
                 ${seat.tier === 'vip' ? '<span class="vip-crown">👑</span>' : ''}
-                <img src="${u.avatarUrl}" alt="${u.nickname}" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=${u.uniqueId}'">
+                <span class="seat-avatar-fallback">✦</span>
+                <img src="${safeImageUrl(u.avatarUrl)}" alt="${escapeHtml(u.nickname)}" onerror="this.style.display='none'">
                 <div class="monk-robe-collar"><span class="prayer-hands">🙏</span></div>
               `}
             </div>
             <div class="lotus-base-3d"></div>
-            <div class="seat-name" title="${u ? u.nickname : 'Đài Sen Chờ'}">${u ? u.nickname : 'Cmt để ngồi'}</div>
+            <div class="seat-name" title="${u ? escapeHtml(u.nickname) : 'Đài sen chờ'}">${u ? escapeHtml(u.nickname) : 'Chỗ trống'}</div>
             ${u && seat.tier === 'vip' ? '<div class="seat-badge">💎 ' + (u.diamondSpent || 0) + '</div>' : ''}
           </div>
         `;
