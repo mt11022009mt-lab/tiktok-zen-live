@@ -74,7 +74,7 @@ const state = {
   recentEvents: [] // Array of recent log events
 };
 
-// Initialize Seats
+// Initialize Seats with starter meditators
 function initSeats(count) {
   state.seats = [];
   for (let i = 0; i < count; i++) {
@@ -92,6 +92,45 @@ function initSeats(count) {
       user: null
     });
   }
+
+  // Pre-seed aesthetic meditators so temple looks lively & radiant
+  const demoMeditators = [
+    { uniqueId: 'zen_tue_tam', nickname: 'Tuệ Tâm', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=TueTam', tier: 'vip', diamonds: 99 },
+    { uniqueId: 'zen_minh_an', nickname: 'Minh An', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=MinhAn', tier: 'vip', diamonds: 66 },
+    { uniqueId: 'zen_dieu_thien', nickname: 'Diệu Thiện', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=DieuThien', tier: 'advanced', diamonds: 20 },
+    { uniqueId: 'zen_phuc_duc', nickname: 'Phúc Đức', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=PhucDuc', tier: 'advanced', diamonds: 10 },
+    { uniqueId: 'zen_an_lac', nickname: 'An Lạc', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=AnLac', tier: 'standard', diamonds: 0 },
+    { uniqueId: 'zen_thien_dinh', nickname: 'Thiền Định', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=ThienDinh', tier: 'standard', diamonds: 0 }
+  ];
+
+  demoMeditators.forEach((demo, idx) => {
+    let targetIdx = idx;
+    if (demo.tier === 'vip') targetIdx = idx;
+    else if (demo.tier === 'advanced') targetIdx = 6 + (idx - 2);
+    else targetIdx = 12 + (idx - 4);
+
+    if (state.seats[targetIdx]) {
+      state.seats[targetIdx].user = {
+        uniqueId: demo.uniqueId,
+        nickname: demo.nickname,
+        avatarUrl: demo.avatarUrl,
+        seatedAt: Date.now(),
+        lastActive: Date.now(),
+        diamondSpent: demo.diamonds,
+        commentsCount: 1,
+        isDemo: true
+      };
+    }
+  });
+
+  state.topDonators = [
+    { uniqueId: 'zen_tue_tam', nickname: 'Tuệ Tâm', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=TueTam', totalDiamonds: 99 },
+    { uniqueId: 'zen_minh_an', nickname: 'Minh An', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=MinhAn', totalDiamonds: 66 },
+    { uniqueId: 'zen_dieu_thien', nickname: 'Diệu Thiện', avatarUrl: 'https://api.dicebear.com/7.x/notionists/svg?seed=DieuThien', totalDiamonds: 20 }
+  ];
+
+  state.stats.gongCount = 108;
+  state.stats.totalLikes = 2500;
 }
 
 initSeats(state.settings.totalSeats);

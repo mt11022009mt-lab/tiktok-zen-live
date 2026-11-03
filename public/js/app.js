@@ -277,20 +277,20 @@ class TempleAmbientCanvas {
 
       if (p.type === 'light') {
         // Sacred Lotus Sparkle / Golden Energy Mote
-        this.ctx.fillStyle = '#ffd700';
-        this.ctx.shadowBlur = 14;
+        this.ctx.fillStyle = '#ffe680';
+        this.ctx.shadowBlur = 8;
         this.ctx.shadowColor = '#f59e0b';
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         this.ctx.fill();
       } else {
-        // Volumetric Incense Smoke Puff
-        p.size += 0.04;
-        this.ctx.fillStyle = 'rgba(235, 215, 195, 0.18)';
-        this.ctx.shadowBlur = 22;
-        this.ctx.shadowColor = '#ffffff';
+        // Subtle Incense Smoke Wisp
+        p.size += 0.02;
+        this.ctx.fillStyle = 'rgba(215, 195, 175, 0.12)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.shadowColor = 'rgba(245, 194, 66, 0.3)';
         this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, p.size * 2.2, 0, Math.PI * 2);
+        this.ctx.arc(p.x, p.y, p.size * 1.6, 0, Math.PI * 2);
         this.ctx.fill();
       }
       this.ctx.restore();
@@ -539,7 +539,7 @@ class TempleApp {
               `}
             </div>
             <div class="lotus-base-3d"></div>
-            <div class="seat-name" title="${u ? u.nickname : 'Đài Sen Chờ'}">${u ? u.nickname : 'Đài Sen'}</div>
+            <div class="seat-name" title="${u ? u.nickname : 'Đài Sen Chờ'}">${u ? u.nickname : 'Cmt để ngồi'}</div>
             ${u && seat.tier === 'vip' ? '<div class="seat-badge">💎 ' + (u.diamondSpent || 0) + '</div>' : ''}
           </div>
         `;
