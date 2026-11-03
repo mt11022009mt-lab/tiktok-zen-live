@@ -437,10 +437,6 @@ function connectTikTok(username) {
       });
       broadcastState();
     });
-        nickname: data.nickname,
-        avatarUrl: data.profilePictureUrl
-      });
-    });
 
     // Viewer count
     tiktokLive.on('roomUser', data => {
