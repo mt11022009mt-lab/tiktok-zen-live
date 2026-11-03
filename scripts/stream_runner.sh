@@ -2,21 +2,33 @@
 set -e
 
 echo "========================================================"
-echo "🌸 KHỞI ĐỘNG HỆ THỐNG LIVESTREAM CHÁNH ĐIỆN CLOUD 24/7 🌸"
+echo "🌸 KHỞI ĐỘNG HỆ THỐNG LIVESTREAM CHÁNH ĐIỆN THỬ NGHIỆM 🌸"
 echo "========================================================"
 
+# Kiểm tra bắt buộc cả Stream Key và RTMP Server do TikTok cấp
 if [ -z "$TIKTOK_STREAM_KEY" ]; then
   echo "❌ LỖI: Chưa cấu hình Secret TIKTOK_STREAM_KEY trong GitHub Secrets!"
   exit 1
 fi
 
-RTMP_SERVER="${TIKTOK_RTMP_URL:-rtmp://live-upload.tiktok.com:443/live/}"
-# Loại bỏ dấu / ở cuối nếu có
-RTMP_SERVER="${RTMP_SERVER%/}"
+if [ -z "$TIKTOK_RTMP_URL" ]; then
+  echo "❌ LỖI: Chưa cấu hình Secret TIKTOK_RTMP_URL! Bạn phải lấy Server URL chính xác từ Live Studio của TikTok."
+  exit 1
+fi
+
+RTMP_SERVER="${TIKTOK_RTMP_URL%/}"
 FULL_STREAM_URL="${RTMP_SERVER}/${TIKTOK_STREAM_KEY}"
+
+# Tính toán thời lượng stream từ input (mặc định 60 phút, tối đa 300 phút)
+MINUTES="${STREAM_DURATION_MINUTES:-60}"
+if [ "$MINUTES" -gt 300 ]; then
+  MINUTES=300
+fi
+DURATION_SEC=$((MINUTES * 60))
 
 echo "📡 Server RTMP: $RTMP_SERVER"
 echo "👤 Kênh TikTok: ${TIKTOK_USERNAME:-Chưa đặt}"
+echo "⏱️ Thời lượng phiên: $MINUTES phút ($DURATION_SEC giây)"
 echo "📺 Độ phân giải: 1080x1920 (Chuẩn Dọc TikTok 9:16)"
 
 # 1. Khởi động màn hình ảo Xvfb
@@ -59,8 +71,13 @@ sleep 6
 
 # 5. Khởi động FFmpeg Stream thẳng lên TikTok
 echo "5️⃣ Bắt đầu bắn luồng RTMP lên TikTok..."
-# Chạy tối đa 5 tiếng 35 phút (20100 giây) để đảm bảo không bị quá giới hạn 6h của GitHub
-STREAM_DURATION=20100
+
+# Bẫy tín hiệu để dọn dẹp an toàn khi dừng tiến trình
+cleanup() {
+  echo "Dọn dẹp các tiến trình nền..."
+  kill -9 $CHROME_PID $SERVER_PID $XVFB_PID 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
 
 ffmpeg -y \
   -f x11grab -draw_mouse 0 -video_size 1080x1920 -framerate 30 -i :99.0 \
@@ -68,8 +85,7 @@ ffmpeg -y \
   -c:v libx264 -preset veryfast -tune zerolatency -b:v 2500k -maxrate 3000k -bufsize 6000k \
   -pix_fmt yuv420p -g 60 -keyint_min 30 \
   -c:a aac -b:a 128k -ar 44100 \
-  -t $STREAM_DURATION \
-  -f flv "$FULL_STREAM_URL" || true
+  -t $DURATION_SEC \
+  -f flv "$FULL_STREAM_URL"
 
-echo "✅ Đã hoàn thành phiên stream. Dọn dẹp tiến trình..."
-kill -9 $CHROME_PID $SERVER_PID $XVFB_PID 2>/dev/null || true
+echo "✅ Đã hoàn thành phiên phát sóng $MINUTES phút!"

@@ -1,22 +1,37 @@
-name: TikTok Zen Live 24-7 Cloud Streamer
+name: TikTok Zen Live Experimental Cloud Streamer
 
 on:
-  workflow_dispatch: # Cho phép bấm nút "Run workflow" bất cứ lúc nào
-  schedule:
-    # Tự động trigger mỗi 5 tiếng để tạo chuỗi tiếp nối
-    - cron: '0 */5 * * *'
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: 'Thời lượng stream phiên này (phút, tối đa 300 phút = 5 tiếng)'
+        required: true
+        default: '60'
+      auto_restart:
+        description: 'Tự động kích hoạt phiên tiếp theo khi phiên này kết thúc thành công? (true/false)'
+        required: true
+        default: 'false'
+
+permissions:
+  actions: write
+  contents: read
+
+# Đảm bảo chỉ có DUY NHẤT 1 phiên stream chạy tại một thời điểm (Tránh xung đột Stream Key)
+concurrency:
+  group: tiktok-live-session
+  cancel-in-progress: false
 
 jobs:
   cloud_stream:
-    name: Phát Sóng Chánh Điện Trực Tiếp Lên TikTok
+    name: Thử Nghiệm Phát Sóng Chánh Điện Lên TikTok
     runs-on: ubuntu-latest
-    timeout-minutes: 360 # Giới hạn tối đa 6 tiếng của GitHub runner
+    timeout-minutes: 360 # Giới hạn tối đa của GitHub Actions
 
     steps:
       - name: 📥 Tải Mã Nguồn Repository
         uses: actions/checkout@v4
 
-      - name: ⚙️ Cài Đặt Node.js Môi Trường
+      - name: ⚙️ Cài Đặt Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -33,16 +48,20 @@ jobs:
       - name: 🚀 Khởi Động Stream Chánh Điện Lên TikTok
         env:
           TIKTOK_STREAM_KEY: ${{ secrets.TIKTOK_STREAM_KEY }}
-          TIKTOK_RTMP_URL: ${{ secrets.TIKTOK_RTMP_URL || 'rtmp://live-upload.tiktok.com:443/live/' }}
+          TIKTOK_RTMP_URL: ${{ secrets.TIKTOK_RTMP_URL }}
           TIKTOK_USERNAME: ${{ secrets.TIKTOK_USERNAME }}
+          STREAM_DURATION_MINUTES: ${{ github.event.inputs.duration_minutes || '60' }}
         run: |
           chmod +x ./scripts/stream_runner.sh
           ./scripts/stream_runner.sh
 
-      - name: 🔄 Tự Động Kích Hoạt Phiên Tiếp Theo (Treo 24/7 Không Ngắt)
-        if: always()
+      # CHỈ kích hoạt phiên tiếp theo khi:
+      # 1. Phiên trước hoàn thành THÀNH CÔNG (tránh vòng lặp lỗi vô tận khi sai Key)
+      # 2. Người dùng đã chọn auto_restart = 'true'
+      - name: 🔄 Kích Hoạt Phiên Tiếp Theo (Có Kiểm Soát)
+        if: success() && github.event.inputs.auto_restart == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Kích hoạt phiên stream kế tiếp để nối luồng 24/7..."
-          gh workflow run stream.yml || true
+          echo "Phiên stream đã hoàn thành thành công. Đang kích hoạt phiên kế tiếp..."
+          gh workflow run stream.yml -f duration_minutes="${{ github.event.inputs.duration_minutes }}" -f auto_restart="true" || true

@@ -49,7 +49,13 @@ Truy cập: **`http://localhost:3000/admin.html`** trên trình duyệt Chrome/E
 
 ---
 
-## 💎 4. Cơ Chế Kiếm Tiền Thực Chiến
-* **Tranh Bồ Đoàn:** Chỉ có 24 chỗ ngồi. Ai donate cao hơn sẽ thay thế người ngồi lâu không tương tác.
-* **Bảng Vàng Công Đức:** Vinh danh TOP 3 Đại Thí Chủ trên đỉnh màn hình kích thích đua Top.
-* **Ghim Giỏ Hàng:** Vừa phát live vừa ghim các sản phẩm: Vòng trầm hương, nụ trầm thác khói, chuông xoay Tây Tạng.
+## ⚠️ 5. Đánh Giá Thực Tế Về Thử Nghiệm Cloud Stream (GitHub Actions)
+
+Mô hình chạy stream qua GitHub Actions được thiết lập như **một giải pháp thử nghiệm kỹ thuật**, KHÔNG nên xem là hạ tầng phát sóng 24/7 ổn định thay thế cho máy chủ chuyên dụng vì các lý do sau:
+
+1. **Vòng đời Stream Key của TikTok:** Trên TikTok, Stream Key thường chỉ có hiệu lực cho một phiên phát sóng duy nhất. Khi một phiên ngắt (dù chỉ vài giây), phiên live có thể bị TikTok tự động đóng, dẫn tới việc dùng lại key cũ cho phiên tiếp theo sẽ thất bại.
+2. **Độ trễ và giới hạn của CI/CD:** GitHub Actions sinh ra để build/test code, không phải đài truyền hình. Các tác vụ cron có độ trễ thực tế từ 15-45 phút và có thể bị trôi lịch hoặc hủy khi hệ thống quá tải.
+3. **Chính sách sử dụng chấp nhận được (AUP):** Việc liên tục sử dụng tài nguyên CI/CD miễn phí để mã hóa video phát trực tiếp dài hạn có thể vi phạm điều khoản chống lạm dụng tài nguyên của nền tảng.
+
+👉 **Khuyến nghị chuẩn sản xuất:**
+- **Để phát sóng 24/7 chuyên nghiệp và lâu dài:** Hãy sử dụng **OBS Studio chạy trên Cloud VPS Windows riêng biệt** (hoặc một máy tính phụ/laptop cắm mạng ở nhà). Cách này đảm bảo không bao giờ bị cắt luồng, giữ vững phiên live và an toàn 100% cho kênh.
